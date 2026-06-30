@@ -2,7 +2,9 @@
 
 Sistema online simples para controlar se o passe da Uber de 24h ou 72h está compensando.
 
-Ele salva tudo em SQLite:
+Agora o sistema salva os dados no Supabase/Postgres, então não precisa de disco persistente no Render.
+
+Ele salva:
 
 - passe de 24h ou 72h;
 - valor do passe;
@@ -35,11 +37,19 @@ http://localhost:3000
 
 ```text
 PORT=3000
-DB_PATH=./data/controle.sqlite
+DATABASE_URL=sua_url_do_supabase_postgres
 APP_PIN=1234
 ```
 
 `APP_PIN` é recomendado para proteger o app. Se não configurar, o app fica sem senha.
+
+Para rodar com banco local sem SSL, use também:
+
+```text
+PGSSLMODE=disable
+```
+
+No Supabase, deixe sem `PGSSLMODE=disable`, porque o servidor já tenta conectar com SSL.
 
 ## Render
 
@@ -54,17 +64,23 @@ Variáveis no Render:
 
 ```text
 NODE_ENV=production
-DB_PATH=/opt/render/project/src/data/controle.sqlite
-APP_PIN=crie-um-pin-seguro
+DATABASE_URL=cole_a_connection_string_do_supabase
+APP_PIN=crie_um_pin_seguro
 ```
 
-Importante: como o banco é SQLite, use um Persistent Disk montado em:
+Não precisa criar Persistent Disk no Render. O banco fica no Supabase.
+
+## Como pegar a DATABASE_URL no Supabase
+
+No Supabase, crie um projeto e copie a connection string do Postgres. Ela geralmente fica em:
 
 ```text
-/opt/render/project/src/data
+Project Settings > Database > Connection string
 ```
 
-Sem disco persistente, o arquivo SQLite pode ser perdido quando o serviço reiniciar ou fizer redeploy.
+Use a URL de conexão do Postgres no Render como `DATABASE_URL`.
+
+O sistema cria automaticamente as tabelas `sessions` e `entries` quando o servidor inicia.
 
 ## Regras de cálculo
 
