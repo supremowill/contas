@@ -2,17 +2,13 @@ services:
   - type: web
     name: controle-passe-uber
     env: node
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_PATH
-        value: /opt/render/project/src/data/controle.sqlite
+      - key: DATABASE_URL
+        sync: false
       - key: APP_PIN
         sync: false
-    disk:
-      name: controle-passe-uber-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
