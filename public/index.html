@@ -5,282 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Controle do Passe Uber</title>
   <style>
-    :root{--bg:#0f172a;--card:#111827;--card2:#1f2937;--text:#f9fafb;--muted:#9ca3af;--line:rgba(255,255,255,.12);--good:#22c55e;--warn:#f59e0b;--bad:#ef4444;--info:#38bdf8}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:radial-gradient(circle at top,#1e293b,var(--bg));color:var(--text);min-height:100vh;padding:16px}.app{width:100%;max-width:980px;margin:0 auto}.header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.header h1{margin:0;font-size:28px}.header p{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:1.45}.card{background:rgba(17,24,39,.94);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 15px 35px rgba(0,0,0,.35);margin-bottom:14px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab,.small-btn{border:0;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer;background:var(--card2);color:var(--text);border:1px solid var(--line)}.tab.active{background:var(--info);color:#020617}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}label{display:block;color:var(--muted);font-size:13px;margin-bottom:7px}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:14px;background:#020617;color:var(--text);padding:13px;font-size:17px;outline:none}textarea{min-height:46px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--info);box-shadow:0 0 0 3px rgba(56,189,248,.15)}button.primary{border:0;border-radius:14px;padding:13px 12px;font-size:15px;font-weight:900;cursor:pointer;color:#020617;background:var(--info)}button.secondary{border-radius:14px;padding:13px 12px;font-size:15px;font-weight:900;cursor:pointer;color:var(--text);background:var(--card2);border:1px solid var(--line)}.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.result{display:grid;grid-template-columns:1.2fr 2fr;gap:12px;align-items:stretch}.result-main{text-align:center;padding:22px 12px;border-radius:16px;background:linear-gradient(180deg,rgba(56,189,248,.12),rgba(255,255,255,.03));border:1px solid var(--line)}.small{color:var(--muted);font-size:13px}.percent{font-size:56px;line-height:1;font-weight:900;margin:8px 0}.status{font-weight:900;font-size:17px;margin-top:8px}.bar{height:14px;border-radius:999px;background:#020617;border:1px solid var(--line);overflow:hidden;margin-top:16px}.bar-fill{height:100%;width:0%;border-radius:999px;transition:width .25s ease}.numbers{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.box{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:12px;min-height:78px}.box .label{color:var(--muted);font-size:12px;margin-bottom:6px;line-height:1.35}.box .value{font-size:20px;font-weight:900}.section{display:none}.section.active{display:block}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:14px}th{color:var(--muted);font-size:12px;text-transform:uppercase;background:rgba(255,255,255,.04)}tr:last-child td{border-bottom:0}.pill{display:inline-block;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:900}.good{color:var(--good)}.bad{color:var(--bad)}.warning,.limit{color:var(--warn)}.muted{color:var(--muted)}.entry{display:flex;justify-content:space-between;gap:10px;border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:14px;padding:10px;margin-top:8px}.entry b{font-size:16px}.danger{color:var(--bad);background:transparent;border:0;cursor:pointer;font-weight:900}.login{position:fixed;inset:0;background:rgba(2,6,23,.92);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}.login .card{max-width:420px;width:100%}.hint{color:var(--muted);font-size:13px;line-height:1.5;margin-top:10px}.top-actions{display:flex;gap:8px;flex-wrap:wrap}.link-btn{color:#020617;text-decoration:none;background:var(--info);border-radius:999px;padding:10px 14px;font-weight:900;font-size:13px}.error{display:none;color:#fecaca;background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.35);border-radius:14px;padding:10px;margin-bottom:12px}@media(max-width:860px){.header,.result{display:block}.grid,.grid2,.grid3,.numbers{grid-template-columns:1fr 1fr}.result-main{margin-bottom:12px}}@media(max-width:520px){body{padding:10px}.grid,.grid2,.grid3,.numbers{grid-template-columns:1fr}.percent{font-size:48px}.header h1{font-size:24px}.entry{display:block}.entry button{margin-top:8px}}
+    :root{--bg:#0f172a;--card:#111827;--card2:#1f2937;--text:#f9fafb;--muted:#9ca3af;--line:rgba(255,255,255,.12);--good:#22c55e;--warn:#f59e0b;--bad:#ef4444;--info:#38bdf8}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:radial-gradient(circle at top,#1e293b,var(--bg));color:var(--text);min-height:100vh;padding:16px}.app{width:100%;max-width:1120px;margin:0 auto}.header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.header h1{margin:0;font-size:28px}.header p{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:1.45}.card{background:rgba(17,24,39,.94);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 15px 35px rgba(0,0,0,.35);margin-bottom:14px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab,.small-btn{border:0;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer;background:var(--card2);color:var(--text);border:1px solid var(--line)}.tab.active{background:var(--info);color:#020617}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}label{display:block;color:var(--muted);font-size:13px;margin-bottom:7px}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:14px;background:#020617;color:var(--text);padding:13px;font-size:17px;outline:none}textarea{min-height:46px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--info);box-shadow:0 0 0 3px rgba(56,189,248,.15)}button.primary{border:0;border-radius:14px;padding:13px 12px;font-size:15px;font-weight:900;cursor:pointer;color:#020617;background:var(--info)}button.secondary{border-radius:14px;padding:13px 12px;font-size:15px;font-weight:900;cursor:pointer;color:var(--text);background:var(--card2);border:1px solid var(--line)}.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.result{display:grid;grid-template-columns:1fr 2.7fr;gap:12px;align-items:stretch}.result-main{text-align:center;padding:22px 12px;border-radius:16px;background:linear-gradient(180deg,rgba(56,189,248,.12),rgba(255,255,255,.03));border:1px solid var(--line)}.small{color:var(--muted);font-size:13px}.percent{font-size:56px;line-height:1;font-weight:900;margin:8px 0}.status{font-weight:900;font-size:17px;margin-top:8px}.bar{height:14px;border-radius:999px;background:#020617;border:1px solid var(--line);overflow:hidden;margin-top:16px}.bar-fill{height:100%;width:0%;border-radius:999px;transition:width .25s ease}.numbers{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.box{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:12px;min-height:78px}.box .label{color:var(--muted);font-size:12px;margin-bottom:6px;line-height:1.35}.box .value{font-size:19px;font-weight:900}.section{display:none}.section.active{display:block}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1080px}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:14px}th{color:var(--muted);font-size:12px;text-transform:uppercase;background:rgba(255,255,255,.04)}tr:last-child td{border-bottom:0}.good{color:var(--good)}.bad{color:var(--bad)}.warning,.limit{color:var(--warn)}.muted{color:var(--muted)}.entry{display:flex;justify-content:space-between;gap:10px;border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:14px;padding:10px;margin-top:8px}.entry b{font-size:16px}.danger{color:var(--bad);background:transparent;border:0;cursor:pointer;font-weight:900}.login{position:fixed;inset:0;background:rgba(2,6,23,.92);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}.login .card{max-width:420px;width:100%}.hint{color:var(--muted);font-size:13px;line-height:1.5;margin-top:10px}.top-actions{display:flex;gap:8px;flex-wrap:wrap}.link-btn{color:#020617;text-decoration:none;background:var(--info);border-radius:999px;padding:10px 14px;font-weight:900;font-size:13px}.error{display:none;color:#fecaca;background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.35);border-radius:14px;padding:10px;margin-bottom:12px}.notice{color:#fde68a;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:14px;padding:12px;margin-bottom:12px}.score-card{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.04);margin-top:12px}.subhead{margin:16px 0 10px;color:var(--text);font-size:18px}.badge{display:inline-block;border-radius:999px;padding:6px 10px;font-weight:900;font-size:12px;background:rgba(255,255,255,.07);border:1px solid var(--line)}@media(max-width:920px){.header,.result{display:block}.grid,.grid2,.numbers{grid-template-columns:1fr 1fr}.result-main{margin-bottom:12px}}@media(max-width:560px){body{padding:10px}.grid,.grid2,.numbers{grid-template-columns:1fr}.percent{font-size:48px}.header h1{font-size:24px}.entry{display:block}.entry button{margin-top:8px}}
   </style>
 </head>
 <body>
-  <div class="login" id="loginBox">
-    <div class="card">
-      <h2>Entrar no controle</h2>
-      <p class="hint">Digite o PIN configurado no Render.</p>
-      <div id="loginError" class="error"></div>
-      <label for="pinInput">PIN</label>
-      <input id="pinInput" type="password" inputmode="numeric" placeholder="Seu PIN" />
-      <div class="btn-row"><button class="primary" onclick="login()">Entrar</button></div>
-    </div>
-  </div>
+  <div class="login" id="loginBox"><div class="card"><h2>Entrar no controle</h2><p class="hint">Digite o PIN configurado no Render.</p><div id="loginError" class="error"></div><label for="pinInput">PIN</label><input id="pinInput" type="password" inputmode="numeric" placeholder="Seu PIN" /><div class="btn-row"><button class="primary" onclick="login()">Entrar</button></div></div></div>
 
   <main class="app">
-    <section class="header">
-      <div>
-        <h1>Controle do Passe Uber</h1>
-        <p>Salva passe 24h/72h no SQLite, soma ganhos, corridas e km, e mostra se está compensando no dia, semana e mês.</p>
-      </div>
-      <div class="top-actions">
-        <a class="link-btn" href="/api/export.csv" target="_blank">Exportar CSV</a>
-        <button class="small-btn" onclick="logout()">Trocar PIN</button>
-      </div>
-    </section>
-
+    <section class="header"><div><h1>Controle do Passe Uber</h1><p>Salva passe 24h/72h, ganhos, corridas e km. Mostra média de km por corrida, bruto por km, líquido por km, custo total e muda automaticamente quando o passe expira.</p></div><div class="top-actions"><a class="link-btn" href="/api/export.csv" target="_blank">Exportar CSV</a><button class="small-btn" onclick="logout()">Trocar PIN</button></div></section>
     <div id="globalError" class="error"></div>
+    <nav class="tabs"><button class="tab active" data-tab="acompanhar" onclick="showTab('acompanhar')">Acompanhar</button><button class="tab" data-tab="novo" onclick="showTab('novo')">Novo passe</button><button class="tab" data-tab="historico" onclick="showTab('historico')">Histórico</button><button class="tab" data-tab="relatorios" onclick="showTab('relatorios')">Relatórios</button></nav>
 
-    <nav class="tabs">
-      <button class="tab active" data-tab="acompanhar" onclick="showTab('acompanhar')">Acompanhar</button>
-      <button class="tab" data-tab="novo" onclick="showTab('novo')">Novo passe</button>
-      <button class="tab" data-tab="historico" onclick="showTab('historico')">Histórico</button>
-      <button class="tab" data-tab="relatorios" onclick="showTab('relatorios')">Relatórios</button>
-    </nav>
+    <section id="novo" class="section"><div class="card"><div id="activeWarning" class="notice" style="display:none"></div><h2>Iniciar novo passe</h2><div class="grid"><div><label>Plataforma</label><select id="newPlatform"><option>Uber</option><option>99</option><option>Particular</option></select></div><div><label>Tipo do passe</label><select id="newType"><option value="24">Passe 24 horas</option><option value="72">Passe 72 horas</option></select></div><div><label>Valor do passe</label><input id="newPrice" type="number" step="0.01" value="56" /></div><div><label>Custo por km</label><input id="newKmCost" type="number" step="0.01" value="0.81" /></div></div><div class="grid2" style="margin-top:12px"><div><label>Data e hora de início</label><input id="newStart" type="datetime-local" /></div><div><label>Observação</label><textarea id="newNotes" placeholder="Ex: chuva, dia fraco, muito km vazio..."></textarea></div></div><div class="btn-row"><button class="primary" onclick="createSession()">Iniciar e salvar</button></div><p class="hint">Enquanto existir um passe vigente, o sistema não deixa iniciar outro. Para trocar antes do fim, cancele/exclua o passe atual no acompanhamento.</p></div></section>
 
-    <section id="novo" class="section">
-      <div class="card">
-        <h2>Iniciar novo passe</h2>
-        <div class="grid">
-          <div><label>Plataforma</label><select id="newPlatform"><option>Uber</option><option>99</option><option>Particular</option></select></div>
-          <div><label>Tipo do passe</label><select id="newType"><option value="24">Passe 24 horas</option><option value="72">Passe 72 horas</option></select></div>
-          <div><label>Valor do passe</label><input id="newPrice" type="number" step="0.01" value="56" /></div>
-          <div><label>Custo por km</label><input id="newKmCost" type="number" step="0.01" value="0.81" /></div>
-        </div>
-        <div class="grid2" style="margin-top:12px">
-          <div><label>Data e hora de início</label><input id="newStart" type="datetime-local" /></div>
-          <div><label>Observação</label><textarea id="newNotes" placeholder="Ex: chuva, dia fraco, muito km vazio..."></textarea></div>
-        </div>
-        <div class="btn-row"><button class="primary" onclick="createSession()">Iniciar e salvar</button></div>
-      </div>
-    </section>
+    <section id="acompanhar" class="section active"><div id="emptyActive" class="card" style="display:none"><h2 id="emptyTitle">Nenhum passe aberto</h2><p class="hint" id="emptyMessage">Crie um passe novo para começar a acompanhar seus ganhos.</p><button class="primary" onclick="showTab('novo')">Criar passe agora</button></div><div id="activeWrap" style="display:none"><div class="card"><div class="result"><div class="result-main"><div class="small">O passe representa</div><p class="percent" id="percentText">0%</p><div class="small">do ganho bruto lançado</div><div class="status" id="statusText">Sem ganho</div><div class="bar"><div class="bar-fill" id="barFill"></div></div></div><div><h3 class="subhead">Resumo do passe</h3><div class="numbers" id="summaryNumbers"></div><h3 class="subhead">Métricas de km e corrida</h3><div class="numbers" id="kmNumbers"></div></div></div><div class="score-card" id="activeInfo"></div><div class="btn-row"><button class="secondary" onclick="loadData()">Atualizar</button><button class="secondary" onclick="cancelActive()">Cancelar/excluir passe atual</button></div></div><div class="card"><h2>Adicionar ganho</h2><p class="hint">Lance corrida por corrida ou um bloco do dia. Preencha o km para calcular R$/km e km médio por corrida.</p><div class="grid"><div><label>Valor ganho</label><input id="entryAmount" type="number" step="0.01" placeholder="Ex: 22,50" /></div><div><label>Qtd. corridas</label><input id="entryRides" type="number" step="1" value="1" /></div><div><label>Km rodado</label><input id="entryKm" type="number" step="0.1" placeholder="Ex: 8,4" /></div><div><label>Horário</label><input id="entryTime" type="datetime-local" /></div></div><div style="margin-top:12px"><label>Observação</label><input id="entryNote" placeholder="Ex: corrida boa, muita distância, espera..." /></div><div class="btn-row"><button class="primary" onclick="addEntry()">Adicionar ao passe</button></div></div><div class="card"><h2>Lançamentos deste passe</h2><div id="entriesList"></div></div></div></section>
 
-    <section id="acompanhar" class="section active">
-      <div id="emptyActive" class="card" style="display:none">
-        <h2>Nenhum passe aberto</h2>
-        <p class="hint">Crie um passe novo para começar a acompanhar seus ganhos.</p>
-        <button class="primary" onclick="showTab('novo')">Criar passe agora</button>
-      </div>
+    <section id="historico" class="section"><div class="card"><h2>Histórico de passes</h2><div class="table-wrap"><table><thead><tr><th>Início</th><th>Situação</th><th>Tipo</th><th>Passe</th><th>Bruto</th><th>Corridas</th><th>Km</th><th>Km/corrida</th><th>Bruto/km</th><th>Líquido/km</th><th>% Passe</th><th>% Custo total</th><th>Líquido c/ km</th><th>Status</th><th>Ações</th></tr></thead><tbody id="historyBody"></tbody></table></div></div></section>
 
-      <div id="activeWrap" style="display:none">
-        <div class="card">
-          <div class="result">
-            <div class="result-main">
-              <div class="small">O passe representa</div>
-              <p class="percent" id="percentText">0%</p>
-              <div class="small">do ganho bruto lançado</div>
-              <div class="status" id="statusText">Sem ganho</div>
-              <div class="bar"><div class="bar-fill" id="barFill"></div></div>
-            </div>
-            <div class="numbers" id="summaryNumbers"></div>
-          </div>
-          <p class="hint" id="activeInfo"></p>
-        </div>
-
-        <div class="card">
-          <h2>Adicionar ganho</h2>
-          <div class="grid">
-            <div><label>Valor ganho</label><input id="entryAmount" type="number" step="0.01" placeholder="Ex: 22,50" /></div>
-            <div><label>Qtd. corridas</label><input id="entryRides" type="number" step="1" value="1" /></div>
-            <div><label>Km rodado</label><input id="entryKm" type="number" step="0.1" placeholder="Opcional" /></div>
-            <div><label>Horário</label><input id="entryTime" type="datetime-local" /></div>
-          </div>
-          <div style="margin-top:12px"><label>Observação</label><input id="entryNote" placeholder="Ex: corrida boa, muita distância, espera..." /></div>
-          <div class="btn-row"><button class="primary" onclick="addEntry()">Adicionar ao passe</button><button class="secondary" onclick="loadData()">Atualizar</button></div>
-        </div>
-
-        <div class="card">
-          <h2>Lançamentos deste passe</h2>
-          <div id="entriesList"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="historico" class="section">
-      <div class="card">
-        <h2>Histórico de passes</h2>
-        <div class="table-wrap"><table><thead><tr><th>Início</th><th>Tipo</th><th>Passe</th><th>Bruto</th><th>Corridas</th><th>Km</th><th>% Passe</th><th>Líquido c/ km</th><th>Status</th><th>Ações</th></tr></thead><tbody id="historyBody"></tbody></table></div>
-      </div>
-    </section>
-
-    <section id="relatorios" class="section">
-      <div class="card">
-        <h2>Relatórios</h2>
-        <div class="btn-row">
-          <button class="secondary" onclick="loadReport('daily')">Diário</button>
-          <button class="secondary" onclick="loadReport('weekly')">Semanal</button>
-          <button class="secondary" onclick="loadReport('monthly')">Mensal</button>
-        </div>
-        <p class="hint" id="reportTitle">Resumo diário</p>
-        <div class="table-wrap"><table><thead><tr><th>Período</th><th>Passes</th><th>Gasto passes</th><th>Bruto</th><th>Corridas</th><th>Km</th><th>% Passe</th><th>Líquido c/ km</th><th>Status</th></tr></thead><tbody id="reportBody"></tbody></table></div>
-      </div>
-    </section>
+    <section id="relatorios" class="section"><div class="card"><h2>Relatórios</h2><div class="btn-row"><button class="secondary" onclick="loadReport('daily')">Diário</button><button class="secondary" onclick="loadReport('weekly')">Semanal</button><button class="secondary" onclick="loadReport('monthly')">Mensal</button></div><p class="hint" id="reportTitle">Resumo diário</p><div class="table-wrap"><table><thead><tr><th>Período</th><th>Passes</th><th>Gasto passes</th><th>Bruto</th><th>Corridas</th><th>Km</th><th>Km/corrida</th><th>Bruto/km</th><th>Líq/km</th><th>% Passe</th><th>% custo total</th><th>Líquido c/ km</th><th>Status</th></tr></thead><tbody id="reportBody"></tbody></table></div></div></section>
   </main>
 
 <script>
-let sessions = [];
-let activeSessionId = Number(localStorage.getItem('activeSessionId') || 0);
-let currentReport = 'daily';
-
-const $ = (id) => document.getElementById(id);
-
-function money(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-function pct(v){ return (Number(v)||0).toFixed(1).replace('.',',') + '%'; }
-function fmtDate(v){ if(!v) return '-'; const [d,t=''] = v.split('T'); const [y,m,day]=d.split('-'); return `${day}/${m}/${y} ${t}`; }
-function nowLocal(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
-function statusClass(s){ return s?.key || 'muted'; }
-function showError(msg){ $('globalError').style.display='block'; $('globalError').textContent=msg; }
-function clearError(){ $('globalError').style.display='none'; $('globalError').textContent=''; }
-
-async function api(path, options={}){
-  const headers = options.headers || {};
-  headers['Content-Type'] = 'application/json';
-  const pin = localStorage.getItem('appPin') || '';
-  if(pin) headers['x-app-pin'] = pin;
-  const res = await fetch(path, {...options, headers});
-  if(res.status === 401){ showLogin(); throw new Error('PIN inválido ou não informado.'); }
-  const contentType = res.headers.get('content-type') || '';
-  const data = contentType.includes('application/json') ? await res.json() : await res.text();
-  if(!res.ok) throw new Error(data.error || 'Erro na requisição.');
-  return data;
-}
-
-function showLogin(){ $('loginBox').style.display='flex'; }
-function hideLogin(){ $('loginBox').style.display='none'; }
-async function login(){
-  $('loginError').style.display='none';
-  try{
-    const pin = $('pinInput').value.trim();
-    await api('/api/login',{method:'POST',body:JSON.stringify({pin})});
-    localStorage.setItem('appPin', pin);
-    hideLogin();
-    await loadData();
-  }catch(e){ $('loginError').style.display='block'; $('loginError').textContent=e.message; }
-}
-function logout(){ localStorage.removeItem('appPin'); showLogin(); }
-
-function showTab(name){
-  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
-  $(name).classList.add('active');
-  document.querySelector(`[data-tab="${name}"]`).classList.add('active');
-  if(name==='historico') renderHistory();
-  if(name==='relatorios') loadReport(currentReport);
-}
-
-async function loadData(){
-  clearError();
-  try{
-    sessions = await api('/api/sessions');
-    if(!activeSessionId && sessions[0]) activeSessionId = sessions[0].id;
-    if(activeSessionId && !sessions.find(s=>s.id===activeSessionId) && sessions[0]) activeSessionId = sessions[0].id;
-    if(activeSessionId) localStorage.setItem('activeSessionId', activeSessionId);
-    renderActive(); renderHistory(); await loadReport(currentReport, true);
-  }catch(e){ showError(e.message); }
-}
-
-function renderActive(){
-  const s = sessions.find(x=>x.id===activeSessionId);
-  $('emptyActive').style.display = s ? 'none' : 'block';
-  $('activeWrap').style.display = s ? 'block' : 'none';
-  if(!s) return;
-  const sum = s.summary;
-  $('percentText').textContent = pct(sum.pass_percent);
-  $('statusText').textContent = sum.status.label;
-  $('statusText').className = 'status ' + statusClass(sum.status);
-  const width = Math.min(sum.pass_percent, 100);
-  $('barFill').style.width = width + '%';
-  $('barFill').style.background = sum.status.key==='good' ? 'var(--good)' : (sum.status.key==='bad' ? 'var(--bad)' : 'var(--warn)');
-  $('summaryNumbers').innerHTML = box('Bruto lançado',money(sum.total_gross)) + box('Líquido sem km',money(sum.net_simple)) + box('Líquido com km',money(sum.net_with_km)) + box('Corridas',sum.total_rides) + box('Km rodado',sum.total_km.toLocaleString('pt-BR')) + box('Custo km',money(sum.km_cost)) + box('Média/corrida',money(sum.average_per_ride)) + box('Falta p/ 15%',money(sum.missing_15));
-  $('activeInfo').textContent = `${s.platform} • Passe ${s.pass_type}h de ${money(s.pass_price)} • início ${fmtDate(s.started_at)} • fim ${fmtDate(s.ended_at)} • custo por km ${money(s.cost_per_km)}.`;
-  renderEntries(s);
-}
-
-function box(label,value){ return `<div class="box"><div class="label">${label}</div><div class="value">${value}</div></div>`; }
-
-function renderEntries(s){
-  const list = $('entriesList');
-  if(!s.entries.length){ list.innerHTML = '<p class="hint">Nenhum lançamento ainda.</p>'; return; }
-  list.innerHTML = '';
-  s.entries.forEach(e=>{
-    const div=document.createElement('div'); div.className='entry';
-    const left=document.createElement('div');
-    left.innerHTML = `<b>${money(e.amount)}</b><div class="small">${fmtDate(e.created_at)} • ${e.rides_count} corrida(s) • ${e.km} km</div><div class="small"></div>`;
-    left.querySelectorAll('.small')[1].textContent = e.note || '';
-    const btn=document.createElement('button'); btn.className='danger'; btn.textContent='Excluir'; btn.onclick=()=>deleteEntry(e.id);
-    div.appendChild(left); div.appendChild(btn); list.appendChild(div);
-  });
-}
-
-async function createSession(){
-  clearError();
-  try{
-    const body = {
-      platform: $('newPlatform').value,
-      pass_type: Number($('newType').value),
-      pass_price: Number($('newPrice').value),
-      cost_per_km: Number($('newKmCost').value),
-      started_at: $('newStart').value || nowLocal(),
-      notes: $('newNotes').value
-    };
-    const created = await api('/api/sessions',{method:'POST',body:JSON.stringify(body)});
-    activeSessionId = created.id; localStorage.setItem('activeSessionId', activeSessionId);
-    $('newNotes').value=''; await loadData(); showTab('acompanhar');
-  }catch(e){ showError(e.message); }
-}
-
-async function addEntry(){
-  clearError();
-  try{
-    const body = { amount:Number($('entryAmount').value), rides_count:Number($('entryRides').value||0), km:Number($('entryKm').value||0), created_at:$('entryTime').value || nowLocal(), note:$('entryNote').value };
-    await api(`/api/sessions/${activeSessionId}/entries`,{method:'POST',body:JSON.stringify(body)});
-    $('entryAmount').value=''; $('entryRides').value='1'; $('entryKm').value=''; $('entryTime').value=nowLocal(); $('entryNote').value='';
-    await loadData();
-  }catch(e){ showError(e.message); }
-}
-
-async function deleteEntry(id){ if(!confirm('Excluir este lançamento?')) return; await api(`/api/entries/${id}`,{method:'DELETE'}); await loadData(); }
-async function deleteSession(id){ if(!confirm('Excluir este passe inteiro?')) return; await api(`/api/sessions/${id}`,{method:'DELETE'}); if(activeSessionId===id){ activeSessionId=0; localStorage.removeItem('activeSessionId'); } await loadData(); }
-function openSession(id){ activeSessionId=id; localStorage.setItem('activeSessionId', id); renderActive(); showTab('acompanhar'); }
-
-function renderHistory(){
-  const body=$('historyBody'); if(!body) return; body.innerHTML='';
-  sessions.forEach(s=>{
-    const sum=s.summary; const tr=document.createElement('tr');
-    tr.innerHTML = `<td>${fmtDate(s.started_at)}</td><td>${s.pass_type}h</td><td>${money(s.pass_price)}</td><td>${money(sum.total_gross)}</td><td>${sum.total_rides}</td><td>${sum.total_km}</td><td>${pct(sum.pass_percent)}</td><td>${money(sum.net_with_km)}</td><td class="${statusClass(sum.status)}">${sum.status.label}</td><td><button class="small-btn" onclick="openSession(${s.id})">Abrir</button> <button class="danger" onclick="deleteSession(${s.id})">Excluir</button></td>`;
-    body.appendChild(tr);
-  });
-  if(!sessions.length) body.innerHTML='<tr><td colspan="10">Nenhum passe salvo ainda.</td></tr>';
-}
-
-async function loadReport(period='daily', silent=false){
-  currentReport=period;
-  try{
-    const rows=await api(`/api/reports?period=${period}`);
-    const names={daily:'Resumo diário',weekly:'Resumo semanal',monthly:'Resumo mensal'};
-    $('reportTitle').textContent=names[period];
-    const body=$('reportBody'); body.innerHTML='';
-    rows.forEach(r=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${r.period}</td><td>${r.sessions_count}</td><td>${money(r.total_pass_price)}</td><td>${money(r.total_gross)}</td><td>${r.total_rides}</td><td>${r.total_km}</td><td>${pct(r.pass_percent)}</td><td>${money(r.total_net_with_km)}</td><td class="${statusClass(r.status)}">${r.status.label}</td>`;
-      body.appendChild(tr);
-    });
-    if(!rows.length) body.innerHTML='<tr><td colspan="9">Sem dados para relatório.</td></tr>';
-  }catch(e){ if(!silent) showError(e.message); }
-}
-
-async function boot(){
-  $('newStart').value=nowLocal(); $('entryTime').value=nowLocal();
-  try{
-    const health = await fetch('/api/health').then(r=>r.json());
-    if(health.pin_required && !localStorage.getItem('appPin')) showLogin();
-    await loadData();
-  }catch(e){ showError('Não consegui carregar o servidor.'); }
-}
-boot();
+let sessions=[];let activeSessionId=Number(localStorage.getItem('activeSessionId')||0);let currentReport='daily';
+const $=id=>document.getElementById(id);const n=v=>Number(v)||0;const money=v=>n(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});const pct=v=>n(v).toFixed(1).replace('.',',')+'%';const km=v=>n(v).toFixed(2).replace('.',',')+' km';
+function fmtDate(v){if(!v)return'-';const[d,t='']=v.split('T');const[y,m,day]=d.split('-');return `${day}/${m}/${y} ${t}`}
+function nowLocal(){const d=new Date();const p=x=>String(x).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
+function endDate(s){return new Date(s.ended_at)}function isExpired(s){return Date.now()>endDate(s).getTime()}function isActive(s){return s&&!isExpired(s)}function activeOpenSession(){return sessions.find(s=>isActive(s))||null}
+function timeLeft(s){const ms=endDate(s).getTime()-Date.now();if(ms<=0)return'Expirado';const h=Math.floor(ms/3600000);const m=Math.floor((ms%3600000)/60000);const d=Math.floor(h/24);const rh=h%24;return d>0?`${d}d ${rh}h ${m}min`:`${h}h ${m}min`}
+function statusClass(s){return s?.key||'muted'}function showError(msg){$('globalError').style.display='block';$('globalError').textContent=msg}function clearError(){$('globalError').style.display='none';$('globalError').textContent=''}function div(a,b){return n(b)>0?n(a)/n(b):0}
+function derived(sum,passPrice){const totalCost=n(passPrice)+n(sum.km_cost);return{grossPerKm:div(sum.total_gross,sum.total_km),netPerKm:div(sum.net_with_km,sum.total_km),kmPerRide:div(sum.total_km,sum.total_rides),passPerRide:div(passPrice,sum.total_rides),kmCostPerRide:div(sum.km_cost,sum.total_rides),totalCost,totalCostPercent:div(totalCost,sum.total_gross)*100,margin:div(sum.net_with_km,sum.total_gross)*100}}
+async function api(path,options={}){const headers=options.headers||{};headers['Content-Type']='application/json';const pin=localStorage.getItem('appPin')||'';if(pin)headers['x-app-pin']=pin;const res=await fetch(path,{...options,headers});if(res.status===401){showLogin();throw new Error('PIN inválido ou não informado.')}const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():await res.text();if(!res.ok)throw new Error(data.error||'Erro na requisição.');return data}
+function showLogin(){$('loginBox').style.display='flex'}function hideLogin(){$('loginBox').style.display='none'}async function login(){$('loginError').style.display='none';try{const pin=$('pinInput').value.trim();await api('/api/login',{method:'POST',body:JSON.stringify({pin})});localStorage.setItem('appPin',pin);hideLogin();await loadData()}catch(e){$('loginError').style.display='block';$('loginError').textContent=e.message}}
+function logout(){localStorage.removeItem('appPin');showLogin()}
+function showTab(name){document.querySelectorAll('.section').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));$(name).classList.add('active');document.querySelector(`[data-tab="${name}"]`).classList.add('active');if(name==='novo')renderNewWarning();if(name==='historico')renderHistory();if(name==='relatorios')loadReport(currentReport)}
+async function loadData(){clearError();try{sessions=await api('/api/sessions');const open=activeOpenSession();if(open&&(!activeSessionId||!isActive(sessions.find(s=>s.id===activeSessionId))))activeSessionId=open.id;if(activeSessionId&&!sessions.find(s=>s.id===activeSessionId)){activeSessionId=0;localStorage.removeItem('activeSessionId')}if(activeSessionId)localStorage.setItem('activeSessionId',activeSessionId);renderActive();renderHistory();renderNewWarning();await loadReport(currentReport,true)}catch(e){showError(e.message)}}
+function renderNewWarning(){const open=activeOpenSession();const box=$('activeWarning');if(!box)return;if(open){box.style.display='block';box.innerHTML=`Já existe um passe vigente: <b>${open.pass_type}h</b>, iniciado em <b>${fmtDate(open.started_at)}</b>. Tempo restante: <b>${timeLeft(open)}</b>. Para iniciar outro antes, cancele/exclua o passe atual.`}else box.style.display='none'}
+function renderActive(){let s=sessions.find(x=>x.id===activeSessionId);if(s&&isExpired(s)){activeSessionId=0;localStorage.removeItem('activeSessionId');s=null}if(!s){const last=sessions[0];$('emptyActive').style.display='block';$('activeWrap').style.display='none';$('emptyTitle').textContent=last&&isExpired(last)?'Último passe expirou':'Nenhum passe vigente';$('emptyMessage').textContent=last&&isExpired(last)?`O passe de ${last.pass_type}h iniciado em ${fmtDate(last.started_at)} expirou. Crie um novo passe para continuar acompanhando.`:'Crie um passe novo para começar a acompanhar seus ganhos.';return}$('emptyActive').style.display='none';$('activeWrap').style.display='block';const sum=s.summary,d=derived(sum,s.pass_price);$('percentText').textContent=pct(sum.pass_percent);$('statusText').textContent=sum.status.label;$('statusText').className='status '+statusClass(sum.status);$('barFill').style.width=Math.min(sum.pass_percent,100)+'%';$('barFill').style.background=sum.status.key==='good'?'var(--good)':sum.status.key==='bad'?'var(--bad)':'var(--warn)';$('summaryNumbers').innerHTML=box('Bruto lançado',money(sum.total_gross))+box('Líquido sem km',money(sum.net_simple))+box('Líquido com km',money(sum.net_with_km))+box('Corridas',sum.total_rides)+box('Km rodado',km(sum.total_km))+box('Custo km',money(sum.km_cost))+box('Falta p/ 20%',money(sum.missing_20))+box('Falta p/ 15%',money(sum.missing_15));$('kmNumbers').innerHTML=box('Média km/corrida',km(d.kmPerRide))+box('Bruto por km',money(d.grossPerKm))+box('Líquido por km',money(d.netPerKm))+box('Passe por corrida',money(d.passPerRide))+box('Custo km por corrida',money(d.kmCostPerRide))+box('Custo total',money(d.totalCost))+box('% custo total',pct(d.totalCostPercent))+box('Margem líquida',pct(d.margin));$('activeInfo').innerHTML=`<span class="badge good">VIGENTE</span> ${s.platform} • Passe ${s.pass_type}h de <b>${money(s.pass_price)}</b> • início <b>${fmtDate(s.started_at)}</b> • fim <b>${fmtDate(s.ended_at)}</b> • tempo restante <b>${timeLeft(s)}</b> • custo por km <b>${money(s.cost_per_km)}</b>.`;renderEntries(s)}
+function box(label,value){return `<div class="box"><div class="label">${label}</div><div class="value">${value}</div></div>`}
+function renderEntries(s){const list=$('entriesList');if(!s.entries.length){list.innerHTML='<p class="hint">Nenhum lançamento ainda.</p>';return}list.innerHTML='';s.entries.forEach(e=>{const grossKm=div(e.amount,e.km);const perRide=div(e.amount,e.rides_count);const divEl=document.createElement('div');divEl.className='entry';const left=document.createElement('div');left.innerHTML=`<b>${money(e.amount)}</b><div class="small">${fmtDate(e.created_at)} • ${e.rides_count} corrida(s) • ${km(e.km)} • ${money(grossKm)}/km • ${money(perRide)}/corrida</div><div class="small"></div>`;left.querySelectorAll('.small')[1].textContent=e.note||'';const btn=document.createElement('button');btn.className='danger';btn.textContent='Excluir';btn.onclick=()=>deleteEntry(e.id);divEl.appendChild(left);divEl.appendChild(btn);list.appendChild(divEl)})}
+async function createSession(){clearError();const open=activeOpenSession();if(open){showError('Já existe um passe vigente. Cancele/exclua o passe atual ou espere expirar para iniciar outro.');showTab('acompanhar');return}try{const body={platform:$('newPlatform').value,pass_type:Number($('newType').value),pass_price:Number($('newPrice').value),cost_per_km:Number($('newKmCost').value),started_at:$('newStart').value||nowLocal(),notes:$('newNotes').value};const created=await api('/api/sessions',{method:'POST',body:JSON.stringify(body)});activeSessionId=created.id;localStorage.setItem('activeSessionId',activeSessionId);$('newNotes').value='';await loadData();showTab('acompanhar')}catch(e){showError(e.message)}}
+async function addEntry(){clearError();const s=sessions.find(x=>x.id===activeSessionId);if(!isActive(s)){showError('Esse passe já expirou. Crie um novo passe para continuar.');renderActive();return}try{const body={amount:Number($('entryAmount').value),rides_count:Number($('entryRides').value||0),km:Number($('entryKm').value||0),created_at:$('entryTime').value||nowLocal(),note:$('entryNote').value};await api(`/api/sessions/${activeSessionId}/entries`,{method:'POST',body:JSON.stringify(body)});$('entryAmount').value='';$('entryRides').value='1';$('entryKm').value='';$('entryTime').value=nowLocal();$('entryNote').value='';await loadData()}catch(e){showError(e.message)}}
+async function deleteEntry(id){if(!confirm('Excluir este lançamento?'))return;await api(`/api/entries/${id}`,{method:'DELETE'});await loadData()}async function deleteSession(id){if(!confirm('Excluir este passe inteiro?'))return;await api(`/api/sessions/${id}`,{method:'DELETE'});if(activeSessionId===id){activeSessionId=0;localStorage.removeItem('activeSessionId')}await loadData()}function cancelActive(){if(activeSessionId)deleteSession(activeSessionId)}function openSession(id){activeSessionId=id;localStorage.setItem('activeSessionId',id);renderActive();showTab('acompanhar')}
+function renderHistory(){const body=$('historyBody');if(!body)return;body.innerHTML='';sessions.forEach(s=>{const sum=s.summary,d=derived(sum,s.pass_price),expired=isExpired(s);const tr=document.createElement('tr');tr.innerHTML=`<td>${fmtDate(s.started_at)}</td><td class="${expired?'bad':'good'}">${expired?'Expirado':'Vigente'}</td><td>${s.pass_type}h</td><td>${money(s.pass_price)}</td><td>${money(sum.total_gross)}</td><td>${sum.total_rides}</td><td>${km(sum.total_km)}</td><td>${km(d.kmPerRide)}</td><td>${money(d.grossPerKm)}</td><td>${money(d.netPerKm)}</td><td>${pct(sum.pass_percent)}</td><td>${pct(d.totalCostPercent)}</td><td>${money(sum.net_with_km)}</td><td class="${statusClass(sum.status)}">${sum.status.label}</td><td>${expired?'':'<button class="small-btn" onclick="openSession('+s.id+')">Abrir</button> '}<button class="danger" onclick="deleteSession(${s.id})">Excluir</button></td>`;body.appendChild(tr)});if(!sessions.length)body.innerHTML='<tr><td colspan="15">Nenhum passe salvo ainda.</td></tr>'}
+async function loadReport(period='daily',silent=false){currentReport=period;try{const rows=await api(`/api/reports?period=${period}`);const names={daily:'Resumo diário',weekly:'Resumo semanal',monthly:'Resumo mensal'};$('reportTitle').textContent=names[period];const body=$('reportBody');body.innerHTML='';rows.forEach(r=>{const d={kmPerRide:div(r.total_km,r.total_rides),grossPerKm:div(r.total_gross,r.total_km),netPerKm:div(r.total_net_with_km,r.total_km),totalCostPercent:div(n(r.total_pass_price)+n(r.total_km_cost),r.total_gross)*100};const tr=document.createElement('tr');tr.innerHTML=`<td>${r.period}</td><td>${r.sessions_count}</td><td>${money(r.total_pass_price)}</td><td>${money(r.total_gross)}</td><td>${r.total_rides}</td><td>${km(r.total_km)}</td><td>${km(d.kmPerRide)}</td><td>${money(d.grossPerKm)}</td><td>${money(d.netPerKm)}</td><td>${pct(r.pass_percent)}</td><td>${pct(d.totalCostPercent)}</td><td>${money(r.total_net_with_km)}</td><td class="${statusClass(r.status)}">${r.status.label}</td>`;body.appendChild(tr)});if(!rows.length)body.innerHTML='<tr><td colspan="13">Sem dados para relatório.</td></tr>'}catch(e){if(!silent)showError(e.message)}}
+async function boot(){$('newStart').value=nowLocal();$('entryTime').value=nowLocal();try{const health=await fetch('/api/health').then(r=>r.json());if(health.pin_required&&!localStorage.getItem('appPin'))showLogin();await loadData();setInterval(()=>{renderActive();renderNewWarning()},60000)}catch(e){showError('Não consegui carregar o servidor.')}}boot();
 </script>
 </body>
 </html>
