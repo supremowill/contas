@@ -1,7 +1,7 @@
 {
   "name": "controle-passe-uber",
-  "version": "1.0.0",
-  "description": "Controle online de passe Uber 24h/72h com SQLite, histórico diário, semanal e mensal.",
+  "version": "1.1.0",
+  "description": "Controle de passe com Postgres.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,8 +11,8 @@
     "node": ">=20 <23"
   },
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
   },
   "license": "MIT"
 }
