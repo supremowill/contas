@@ -1,51 +1,24 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const APP_PIN = process.env.APP_PIN || '';
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'controle.sqlite');
+const DATABASE_URL = process.env.DATABASE_URL;
 
-fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+if (!DATABASE_URL) {
+  console.error('DATABASE_URL não configurada. Configure a URL do Supabase no Render.');
+  process.exit(1);
+}
 
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false }
+});
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-
-function initDb() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      platform TEXT NOT NULL DEFAULT 'Uber',
-      pass_type INTEGER NOT NULL DEFAULT 24,
-      pass_price REAL NOT NULL DEFAULT 0,
-      cost_per_km REAL NOT NULL DEFAULT 0.81,
-      started_at TEXT NOT NULL,
-      ended_at TEXT NOT NULL,
-      notes TEXT DEFAULT '',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS entries (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id INTEGER NOT NULL,
-      amount REAL NOT NULL DEFAULT 0,
-      rides_count INTEGER NOT NULL DEFAULT 0,
-      km REAL NOT NULL DEFAULT 0,
-      note TEXT DEFAULT '',
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-  `);
-}
-
-initDb();
 
 function numberValue(value, fallback = 0) {
   const n = Number(String(value ?? '').replace(',', '.'));
@@ -55,6 +28,10 @@ function numberValue(value, fallback = 0) {
 function integerValue(value, fallback = 0) {
   const n = parseInt(value, 10);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function round2(value) {
+  return Math.round((numberValue(value) + Number.EPSILON) * 100) / 100;
 }
 
 function nowLocalMinute() {
@@ -79,6 +56,42 @@ function statusFromPercent(percent, gross) {
   return { key: 'good', label: 'Mais saudável' };
 }
 
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id BIGSERIAL PRIMARY KEY,
+      platform TEXT NOT NULL DEFAULT 'Uber',
+      pass_type INTEGER NOT NULL DEFAULT 24,
+      pass_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+      cost_per_km NUMERIC(12,2) NOT NULL DEFAULT 0.81,
+      started_at TEXT NOT NULL,
+      ended_at TEXT NOT NULL,
+      notes TEXT DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS entries (
+      id BIGSERIAL PRIMARY KEY,
+      session_id BIGINT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+      rides_count INTEGER NOT NULL DEFAULT 0,
+      km NUMERIC(12,2) NOT NULL DEFAULT 0,
+      note TEXT DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_entries_session_id ON entries(session_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
+  `);
+}
+
+function requirePin(req, res, next) {
+  if (!APP_PIN) return next();
+  if (req.header('x-app-pin') === APP_PIN) return next();
+  return res.status(401).json({ error: 'PIN inválido ou não informado.' });
+}
+
 function sessionSummary(session, entries) {
   const totalGross = entries.reduce((sum, item) => sum + numberValue(item.amount), 0);
   const totalRides = entries.reduce((sum, item) => sum + integerValue(item.rides_count), 0);
@@ -92,9 +105,6 @@ function sessionSummary(session, entries) {
   const netWithKm = totalGross - passPrice - kmCost;
   const meta20 = passPrice > 0 ? passPrice / 0.20 : 0;
   const meta15 = passPrice > 0 ? passPrice / 0.15 : 0;
-  const missing20 = Math.max(meta20 - totalGross, 0);
-  const missing15 = Math.max(meta15 - totalGross, 0);
-  const status = statusFromPercent(passPercent, totalGross);
 
   return {
     total_gross: round2(totalGross),
@@ -110,38 +120,27 @@ function sessionSummary(session, entries) {
     average_km_per_ride: round2(totalRides > 0 ? totalKm / totalRides : 0),
     meta_20: round2(meta20),
     meta_15: round2(meta15),
-    missing_20: round2(missing20),
-    missing_15: round2(missing15),
-    status
+    missing_20: round2(Math.max(meta20 - totalGross, 0)),
+    missing_15: round2(Math.max(meta15 - totalGross, 0)),
+    status: statusFromPercent(passPercent, totalGross)
   };
 }
 
-function round2(value) {
-  return Math.round((numberValue(value) + Number.EPSILON) * 100) / 100;
+async function readEntries(sessionId) {
+  const result = await pool.query('SELECT * FROM entries WHERE session_id = $1 ORDER BY created_at DESC, id DESC', [sessionId]);
+  return result.rows;
 }
 
-function requirePin(req, res, next) {
-  if (!APP_PIN) return next();
-  const pin = req.header('x-app-pin');
-  if (pin === APP_PIN) return next();
-  return res.status(401).json({ error: 'PIN inválido ou não informado.' });
+async function sessionWithSummary(session) {
+  const entries = await readEntries(session.id);
+  return { ...session, entries, summary: sessionSummary(session, entries) };
 }
 
-function readEntries(sessionId) {
-  return db.prepare('SELECT * FROM entries WHERE session_id = ? ORDER BY created_at DESC, id DESC').all(sessionId);
-}
-
-function sessionWithSummary(session) {
-  const entries = readEntries(session.id);
-  return {
-    ...session,
-    entries,
-    summary: sessionSummary(session, entries)
-  };
-}
-
-function allSessionsWithSummary() {
-  return db.prepare('SELECT * FROM sessions ORDER BY started_at DESC, id DESC').all().map(sessionWithSummary);
+async function allSessionsWithSummary() {
+  const result = await pool.query('SELECT * FROM sessions ORDER BY started_at DESC, id DESC');
+  const rows = [];
+  for (const session of result.rows) rows.push(await sessionWithSummary(session));
+  return rows;
 }
 
 function isoWeekKey(datetimeText) {
@@ -162,8 +161,8 @@ function reportKey(session, period) {
   return session.started_at.slice(0, 10);
 }
 
-function buildReport(period) {
-  const sessions = allSessionsWithSummary();
+async function buildReport(period) {
+  const sessions = await allSessionsWithSummary();
   const map = new Map();
 
   for (const session of sessions) {
@@ -210,8 +209,13 @@ function buildReport(period) {
   }).sort((a, b) => b.period.localeCompare(a.period));
 }
 
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, pin_required: Boolean(APP_PIN), db_path: DB_PATH });
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ ok: true, pin_required: Boolean(APP_PIN), database: 'postgres' });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: 'Falha ao conectar ao banco.' });
+  }
 });
 
 app.post('/api/login', (req, res) => {
@@ -220,150 +224,164 @@ app.post('/api/login', (req, res) => {
   return res.status(401).json({ error: 'PIN inválido.' });
 });
 
-app.get('/api/sessions', requirePin, (req, res) => {
-  res.json(allSessionsWithSummary());
+app.get('/api/sessions', requirePin, async (req, res, next) => {
+  try { res.json(await allSessionsWithSummary()); } catch (error) { next(error); }
 });
 
-app.get('/api/sessions/:id', requirePin, (req, res) => {
-  const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
-  if (!session) return res.status(404).json({ error: 'Passe não encontrado.' });
-  res.json(sessionWithSummary(session));
+app.get('/api/sessions/:id', requirePin, async (req, res, next) => {
+  try {
+    const result = await pool.query('SELECT * FROM sessions WHERE id = $1', [req.params.id]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Passe não encontrado.' });
+    res.json(await sessionWithSummary(result.rows[0]));
+  } catch (error) { next(error); }
 });
 
-app.post('/api/sessions', requirePin, (req, res) => {
-  const passType = integerValue(req.body.pass_type, 24);
-  const safePassType = passType === 72 ? 72 : 24;
-  const startedAt = req.body.started_at || nowLocalMinute();
-  const endedAt = addHoursLocal(startedAt, safePassType);
-  const now = nowLocalMinute();
+app.post('/api/sessions', requirePin, async (req, res, next) => {
+  try {
+    const passType = integerValue(req.body.pass_type, 24);
+    const safePassType = passType === 72 ? 72 : 24;
+    const startedAt = req.body.started_at || nowLocalMinute();
+    const endedAt = addHoursLocal(startedAt, safePassType);
+    const now = nowLocalMinute();
 
-  const info = db.prepare(`
-    INSERT INTO sessions (platform, pass_type, pass_price, cost_per_km, started_at, ended_at, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    String(req.body.platform || 'Uber'),
-    safePassType,
-    round2(req.body.pass_price),
-    round2(numberValue(req.body.cost_per_km, 0.81)),
-    startedAt,
-    endedAt,
-    String(req.body.notes || ''),
-    now,
-    now
-  );
+    const result = await pool.query(`
+      INSERT INTO sessions (platform, pass_type, pass_price, cost_per_km, started_at, ended_at, notes, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `, [
+      String(req.body.platform || 'Uber'),
+      safePassType,
+      round2(req.body.pass_price),
+      round2(numberValue(req.body.cost_per_km, 0.81)),
+      startedAt,
+      endedAt,
+      String(req.body.notes || ''),
+      now,
+      now
+    ]);
 
-  const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(info.lastInsertRowid);
-  res.status(201).json(sessionWithSummary(session));
+    res.status(201).json(await sessionWithSummary(result.rows[0]));
+  } catch (error) { next(error); }
 });
 
-app.patch('/api/sessions/:id', requirePin, (req, res) => {
-  const current = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
-  if (!current) return res.status(404).json({ error: 'Passe não encontrado.' });
+app.patch('/api/sessions/:id', requirePin, async (req, res, next) => {
+  try {
+    const currentResult = await pool.query('SELECT * FROM sessions WHERE id = $1', [req.params.id]);
+    const current = currentResult.rows[0];
+    if (!current) return res.status(404).json({ error: 'Passe não encontrado.' });
 
-  const passType = req.body.pass_type !== undefined ? integerValue(req.body.pass_type, current.pass_type) : current.pass_type;
-  const safePassType = passType === 72 ? 72 : 24;
-  const startedAt = req.body.started_at || current.started_at;
-  const endedAt = addHoursLocal(startedAt, safePassType);
-  const now = nowLocalMinute();
+    const passType = req.body.pass_type !== undefined ? integerValue(req.body.pass_type, current.pass_type) : integerValue(current.pass_type, 24);
+    const safePassType = passType === 72 ? 72 : 24;
+    const startedAt = req.body.started_at || current.started_at;
+    const endedAt = addHoursLocal(startedAt, safePassType);
+    const now = nowLocalMinute();
 
-  db.prepare(`
-    UPDATE sessions
-    SET platform = ?, pass_type = ?, pass_price = ?, cost_per_km = ?, started_at = ?, ended_at = ?, notes = ?, updated_at = ?
-    WHERE id = ?
-  `).run(
-    String(req.body.platform ?? current.platform),
-    safePassType,
-    req.body.pass_price !== undefined ? round2(req.body.pass_price) : current.pass_price,
-    req.body.cost_per_km !== undefined ? round2(numberValue(req.body.cost_per_km, 0.81)) : current.cost_per_km,
-    startedAt,
-    endedAt,
-    String(req.body.notes ?? current.notes ?? ''),
-    now,
-    req.params.id
-  );
+    const result = await pool.query(`
+      UPDATE sessions
+      SET platform = $1, pass_type = $2, pass_price = $3, cost_per_km = $4, started_at = $5, ended_at = $6, notes = $7, updated_at = $8
+      WHERE id = $9
+      RETURNING *
+    `, [
+      String(req.body.platform ?? current.platform),
+      safePassType,
+      req.body.pass_price !== undefined ? round2(req.body.pass_price) : current.pass_price,
+      req.body.cost_per_km !== undefined ? round2(numberValue(req.body.cost_per_km, 0.81)) : current.cost_per_km,
+      startedAt,
+      endedAt,
+      String(req.body.notes ?? current.notes ?? ''),
+      now,
+      req.params.id
+    ]);
 
-  const updated = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
-  res.json(sessionWithSummary(updated));
+    res.json(await sessionWithSummary(result.rows[0]));
+  } catch (error) { next(error); }
 });
 
-app.delete('/api/sessions/:id', requirePin, (req, res) => {
-  const info = db.prepare('DELETE FROM sessions WHERE id = ?').run(req.params.id);
-  res.json({ ok: true, deleted: info.changes });
+app.delete('/api/sessions/:id', requirePin, async (req, res, next) => {
+  try {
+    const result = await pool.query('DELETE FROM sessions WHERE id = $1', [req.params.id]);
+    res.json({ ok: true, deleted: result.rowCount });
+  } catch (error) { next(error); }
 });
 
-app.post('/api/sessions/:id/entries', requirePin, (req, res) => {
-  const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
-  if (!session) return res.status(404).json({ error: 'Passe não encontrado.' });
+app.post('/api/sessions/:id/entries', requirePin, async (req, res, next) => {
+  try {
+    const sessionResult = await pool.query('SELECT * FROM sessions WHERE id = $1', [req.params.id]);
+    const session = sessionResult.rows[0];
+    if (!session) return res.status(404).json({ error: 'Passe não encontrado.' });
 
-  const amount = round2(req.body.amount);
-  if (amount <= 0) return res.status(400).json({ error: 'Informe um valor de ganho maior que zero.' });
+    const amount = round2(req.body.amount);
+    if (amount <= 0) return res.status(400).json({ error: 'Informe um valor de ganho maior que zero.' });
 
-  const createdAt = req.body.created_at || nowLocalMinute();
-  const info = db.prepare(`
-    INSERT INTO entries (session_id, amount, rides_count, km, note, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(
-    session.id,
-    amount,
-    Math.max(integerValue(req.body.rides_count, 0), 0),
-    Math.max(round2(req.body.km), 0),
-    String(req.body.note || ''),
-    createdAt
-  );
+    const result = await pool.query(`
+      INSERT INTO entries (session_id, amount, rides_count, km, note, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [
+      session.id,
+      amount,
+      Math.max(integerValue(req.body.rides_count, 0), 0),
+      Math.max(round2(req.body.km), 0),
+      String(req.body.note || ''),
+      req.body.created_at || nowLocalMinute()
+    ]);
 
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(info.lastInsertRowid);
-  res.status(201).json(entry);
+    res.status(201).json(result.rows[0]);
+  } catch (error) { next(error); }
 });
 
-app.delete('/api/entries/:id', requirePin, (req, res) => {
-  const info = db.prepare('DELETE FROM entries WHERE id = ?').run(req.params.id);
-  res.json({ ok: true, deleted: info.changes });
+app.delete('/api/entries/:id', requirePin, async (req, res, next) => {
+  try {
+    const result = await pool.query('DELETE FROM entries WHERE id = $1', [req.params.id]);
+    res.json({ ok: true, deleted: result.rowCount });
+  } catch (error) { next(error); }
 });
 
-app.get('/api/reports', requirePin, (req, res) => {
-  const period = ['daily', 'weekly', 'monthly'].includes(req.query.period) ? req.query.period : 'daily';
-  res.json(buildReport(period));
+app.get('/api/reports', requirePin, async (req, res, next) => {
+  try {
+    const period = ['daily', 'weekly', 'monthly'].includes(req.query.period) ? req.query.period : 'daily';
+    res.json(await buildReport(period));
+  } catch (error) { next(error); }
 });
 
-app.get('/api/export.csv', requirePin, (req, res) => {
-  const sessions = allSessionsWithSummary();
-  const header = [
-    'id','plataforma','tipo_passe_horas','valor_passe','inicio','fim','bruto','corridas','km','custo_km','liquido_sem_km','liquido_com_km','percentual_passe','status','observacao'
-  ];
-  const rows = sessions.map((s) => [
-    s.id,
-    s.platform,
-    s.pass_type,
-    s.pass_price,
-    s.started_at,
-    s.ended_at,
-    s.summary.total_gross,
-    s.summary.total_rides,
-    s.summary.total_km,
-    s.summary.km_cost,
-    s.summary.net_simple,
-    s.summary.net_with_km,
-    s.summary.pass_percent,
-    s.summary.status.label,
-    (s.notes || '').replace(/\n/g, ' ')
-  ]);
+app.get('/api/export.csv', requirePin, async (req, res, next) => {
+  try {
+    const sessions = await allSessionsWithSummary();
+    const header = ['id','plataforma','tipo_passe_horas','valor_passe','inicio','fim','bruto','corridas','km','custo_km','liquido_sem_km','liquido_com_km','percentual_passe','status','observacao'];
+    const rows = sessions.map((s) => [
+      s.id, s.platform, s.pass_type, s.pass_price, s.started_at, s.ended_at,
+      s.summary.total_gross, s.summary.total_rides, s.summary.total_km, s.summary.km_cost,
+      s.summary.net_simple, s.summary.net_with_km, s.summary.pass_percent, s.summary.status.label,
+      (s.notes || '').replace(/\n/g, ' ')
+    ]);
 
-  const csv = [header, ...rows].map((row) => row.map((value) => {
-    const text = String(value ?? '');
-    return '"' + text.replace(/"/g, '""') + '"';
-  }).join(';')).join('\n');
+    const csv = [header, ...rows].map((row) => row.map((value) => {
+      const text = String(value ?? '');
+      return '"' + text.replace(/"/g, '""') + '"';
+    }).join(';')).join('\n');
 
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="controle-passe-uber.csv"');
-  res.send('\ufeff' + csv);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="controle-passe-uber.csv"');
+    res.send('\ufeff' + csv);
+  } catch (error) { next(error); }
 });
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Controle Passe Uber rodando na porta ${PORT}`);
-  console.log(`Banco SQLite: ${DB_PATH}`);
-  console.log(APP_PIN ? 'PIN ativo.' : 'PIN desativado. Configure APP_PIN no Render para proteger o app.');
+app.use((error, req, res, next) => {
+  console.error(error);
+  res.status(500).json({ error: 'Erro interno do servidor.' });
+});
+
+initDb().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Controle Passe Uber rodando na porta ${PORT}`);
+    console.log('Banco: Supabase/Postgres');
+    console.log(APP_PIN ? 'PIN ativo.' : 'PIN desativado. Configure APP_PIN no Render para proteger o app.');
+  });
+}).catch((error) => {
+  console.error('Erro ao iniciar banco:', error);
+  process.exit(1);
 });
