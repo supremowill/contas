@@ -1,0 +1,18 @@
+{
+  "name": "controle-passe-uber",
+  "version": "1.0.0",
+  "description": "Controle online de passe Uber 24h/72h com SQLite, histórico diário, semanal e mensal.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=20 <23"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2"
+  },
+  "license": "MIT"
+}
