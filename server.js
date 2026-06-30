@@ -64,6 +64,7 @@ async function initDb() {
       pass_type INTEGER NOT NULL DEFAULT 24,
       pass_price NUMERIC(12,2) NOT NULL DEFAULT 0,
       cost_per_km NUMERIC(12,2) NOT NULL DEFAULT 0.81,
+      start_odometer NUMERIC(12,2) NOT NULL DEFAULT 0,
       started_at TEXT NOT NULL,
       ended_at TEXT NOT NULL,
       notes TEXT DEFAULT '',
@@ -77,9 +78,13 @@ async function initDb() {
       amount NUMERIC(12,2) NOT NULL DEFAULT 0,
       rides_count INTEGER NOT NULL DEFAULT 0,
       km NUMERIC(12,2) NOT NULL DEFAULT 0,
+      current_odometer NUMERIC(12,2) NOT NULL DEFAULT 0,
       note TEXT DEFAULT '',
       created_at TEXT NOT NULL
     );
+
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS start_odometer NUMERIC(12,2) NOT NULL DEFAULT 0;
+    ALTER TABLE entries ADD COLUMN IF NOT EXISTS current_odometer NUMERIC(12,2) NOT NULL DEFAULT 0;
 
     CREATE INDEX IF NOT EXISTS idx_entries_session_id ON entries(session_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
@@ -92,10 +97,48 @@ function requirePin(req, res, next) {
   return res.status(401).json({ error: 'PIN inválido ou não informado.' });
 }
 
+function enrichEntries(session, entriesAsc) {
+  let previousOdometer = numberValue(session.start_odometer, 0);
+  let lastValidOdometer = previousOdometer;
+
+  return entriesAsc.map((entry) => {
+    const currentOdometer = numberValue(entry.current_odometer, 0);
+    let kmDelta = numberValue(entry.km, 0);
+
+    if (previousOdometer > 0 && currentOdometer >= previousOdometer) {
+      kmDelta = currentOdometer - previousOdometer;
+    }
+
+    if (currentOdometer > 0) {
+      previousOdometer = currentOdometer;
+      lastValidOdometer = currentOdometer;
+    }
+
+    return {
+      ...entry,
+      km_delta: round2(kmDelta),
+      odometer_valid: currentOdometer > 0,
+      last_valid_odometer: round2(lastValidOdometer)
+    };
+  });
+}
+
+function totalKmFromOdometer(session, enrichedEntries) {
+  const startOdometer = numberValue(session.start_odometer, 0);
+  const lastEntryWithOdometer = [...enrichedEntries].reverse().find((entry) => numberValue(entry.current_odometer, 0) > 0);
+  const lastOdometer = lastEntryWithOdometer ? numberValue(lastEntryWithOdometer.current_odometer, 0) : 0;
+
+  if (startOdometer > 0 && lastOdometer >= startOdometer) {
+    return lastOdometer - startOdometer;
+  }
+
+  return enrichedEntries.reduce((sum, item) => sum + numberValue(item.km_delta ?? item.km), 0);
+}
+
 function sessionSummary(session, entries) {
   const totalGross = entries.reduce((sum, item) => sum + numberValue(item.amount), 0);
   const totalRides = entries.reduce((sum, item) => sum + integerValue(item.rides_count), 0);
-  const totalKm = entries.reduce((sum, item) => sum + numberValue(item.km), 0);
+  const totalKm = totalKmFromOdometer(session, entries);
   const passPrice = numberValue(session.pass_price);
   const costPerKm = numberValue(session.cost_per_km, 0.81);
   const passType = integerValue(session.pass_type, 24);
@@ -105,11 +148,16 @@ function sessionSummary(session, entries) {
   const netWithKm = totalGross - passPrice - kmCost;
   const meta20 = passPrice > 0 ? passPrice / 0.20 : 0;
   const meta15 = passPrice > 0 ? passPrice / 0.15 : 0;
+  const startOdometer = numberValue(session.start_odometer, 0);
+  const latestOdometerEntry = [...entries].reverse().find((entry) => numberValue(entry.current_odometer, 0) > 0);
+  const latestOdometer = latestOdometerEntry ? numberValue(latestOdometerEntry.current_odometer, 0) : 0;
 
   return {
     total_gross: round2(totalGross),
     total_rides: totalRides,
     total_km: round2(totalKm),
+    start_odometer: round2(startOdometer),
+    latest_odometer: round2(latestOdometer),
     km_cost: round2(kmCost),
     net_simple: round2(netSimple),
     net_with_km: round2(netWithKm),
@@ -118,6 +166,8 @@ function sessionSummary(session, entries) {
     pass_cost_per_day: round2(passType > 0 ? passPrice / (passType / 24) : 0),
     average_per_ride: round2(totalRides > 0 ? totalGross / totalRides : 0),
     average_km_per_ride: round2(totalRides > 0 ? totalKm / totalRides : 0),
+    gross_per_km: round2(totalKm > 0 ? totalGross / totalKm : 0),
+    net_per_km: round2(totalKm > 0 ? netWithKm / totalKm : 0),
     meta_20: round2(meta20),
     meta_15: round2(meta15),
     missing_20: round2(Math.max(meta20 - totalGross, 0)),
@@ -127,13 +177,14 @@ function sessionSummary(session, entries) {
 }
 
 async function readEntries(sessionId) {
-  const result = await pool.query('SELECT * FROM entries WHERE session_id = $1 ORDER BY created_at DESC, id DESC', [sessionId]);
+  const result = await pool.query('SELECT * FROM entries WHERE session_id = $1 ORDER BY created_at ASC, id ASC', [sessionId]);
   return result.rows;
 }
 
 async function sessionWithSummary(session) {
-  const entries = await readEntries(session.id);
-  return { ...session, entries, summary: sessionSummary(session, entries) };
+  const entriesAsc = await readEntries(session.id);
+  const enrichedAsc = enrichEntries(session, entriesAsc);
+  return { ...session, entries: [...enrichedAsc].reverse(), summary: sessionSummary(session, enrichedAsc) };
 }
 
 async function allSessionsWithSummary() {
@@ -203,6 +254,9 @@ async function buildReport(period) {
       total_net_simple: round2(row.total_net_simple),
       total_net_with_km: round2(row.total_net_with_km),
       average_per_ride: round2(row.total_rides > 0 ? row.total_gross / row.total_rides : 0),
+      average_km_per_ride: round2(row.total_rides > 0 ? row.total_km / row.total_rides : 0),
+      gross_per_km: round2(row.total_km > 0 ? row.total_gross / row.total_km : 0),
+      net_per_km: round2(row.total_km > 0 ? row.total_net_with_km / row.total_km : 0),
       pass_percent: round2(passPercent),
       status: statusFromPercent(passPercent, row.total_gross)
     };
@@ -245,14 +299,15 @@ app.post('/api/sessions', requirePin, async (req, res, next) => {
     const now = nowLocalMinute();
 
     const result = await pool.query(`
-      INSERT INTO sessions (platform, pass_type, pass_price, cost_per_km, started_at, ended_at, notes, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO sessions (platform, pass_type, pass_price, cost_per_km, start_odometer, started_at, ended_at, notes, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `, [
       String(req.body.platform || 'Uber'),
       safePassType,
       round2(req.body.pass_price),
       round2(numberValue(req.body.cost_per_km, 0.81)),
+      round2(req.body.start_odometer),
       startedAt,
       endedAt,
       String(req.body.notes || ''),
@@ -278,14 +333,15 @@ app.patch('/api/sessions/:id', requirePin, async (req, res, next) => {
 
     const result = await pool.query(`
       UPDATE sessions
-      SET platform = $1, pass_type = $2, pass_price = $3, cost_per_km = $4, started_at = $5, ended_at = $6, notes = $7, updated_at = $8
-      WHERE id = $9
+      SET platform = $1, pass_type = $2, pass_price = $3, cost_per_km = $4, start_odometer = $5, started_at = $6, ended_at = $7, notes = $8, updated_at = $9
+      WHERE id = $10
       RETURNING *
     `, [
       String(req.body.platform ?? current.platform),
       safePassType,
       req.body.pass_price !== undefined ? round2(req.body.pass_price) : current.pass_price,
       req.body.cost_per_km !== undefined ? round2(numberValue(req.body.cost_per_km, 0.81)) : current.cost_per_km,
+      req.body.start_odometer !== undefined ? round2(req.body.start_odometer) : current.start_odometer,
       startedAt,
       endedAt,
       String(req.body.notes ?? current.notes ?? ''),
@@ -314,14 +370,15 @@ app.post('/api/sessions/:id/entries', requirePin, async (req, res, next) => {
     if (amount <= 0) return res.status(400).json({ error: 'Informe um valor de ganho maior que zero.' });
 
     const result = await pool.query(`
-      INSERT INTO entries (session_id, amount, rides_count, km, note, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO entries (session_id, amount, rides_count, km, current_odometer, note, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `, [
       session.id,
       amount,
       Math.max(integerValue(req.body.rides_count, 0), 0),
       Math.max(round2(req.body.km), 0),
+      Math.max(round2(req.body.current_odometer), 0),
       String(req.body.note || ''),
       req.body.created_at || nowLocalMinute()
     ]);
@@ -347,10 +404,12 @@ app.get('/api/reports', requirePin, async (req, res, next) => {
 app.get('/api/export.csv', requirePin, async (req, res, next) => {
   try {
     const sessions = await allSessionsWithSummary();
-    const header = ['id','plataforma','tipo_passe_horas','valor_passe','inicio','fim','bruto','corridas','km','custo_km','liquido_sem_km','liquido_com_km','percentual_passe','status','observacao'];
+    const header = ['id','plataforma','tipo_passe_horas','valor_passe','inicio','fim','km_inicial','km_atual','km_rodado','bruto','corridas','km_medio_por_corrida','bruto_por_km','liquido_por_km','custo_km','liquido_sem_km','liquido_com_km','percentual_passe','status','observacao'];
     const rows = sessions.map((s) => [
       s.id, s.platform, s.pass_type, s.pass_price, s.started_at, s.ended_at,
-      s.summary.total_gross, s.summary.total_rides, s.summary.total_km, s.summary.km_cost,
+      s.summary.start_odometer, s.summary.latest_odometer, s.summary.total_km,
+      s.summary.total_gross, s.summary.total_rides, s.summary.average_km_per_ride,
+      s.summary.gross_per_km, s.summary.net_per_km, s.summary.km_cost,
       s.summary.net_simple, s.summary.net_with_km, s.summary.pass_percent, s.summary.status.label,
       (s.notes || '').replace(/\n/g, ' ')
     ]);
