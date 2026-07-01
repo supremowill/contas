@@ -45,6 +45,44 @@ module.exports = function registerRadar(app, pool) {
   function message(c, fare, km, min, netKm, netHour, profit) {
     return `${label(c)}: R$ ${r(fare).toFixed(2).replace('.', ',')} • ${r(km)} km • ${r(min)} min • lucro est. R$ ${r(profit).toFixed(2).replace('.', ',')} • R$ ${r(netKm).toFixed(2).replace('.', ',')}/km liq. • R$ ${r(netHour).toFixed(2).replace('.', ',')}/h liq.`;
   }
+  function normalizeText(text) {
+    return String(text || '')
+      .replace(/\r/g, '\n')
+      .replace(/,/g, '.')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  function firstNumber(s) {
+    const m = String(s || '').match(/\d+(?:[.,.]\d+)?/);
+    return m ? n(m[0]) : 0;
+  }
+  function parseOfferText(rawText) {
+    const text = normalizeText(rawText);
+    const fareMatch = text.match(/R\$\s*(\d+(?:[.,.]\d+)?)/i) || text.match(/(?:valor|ganho|preco|preço)\D{0,12}(\d+(?:[.,.]\d+)?)/i);
+    const pickupMatch = text.match(/(\d+(?:[.,.]\d+)?)\s*min(?:uto|utos)?\s*\((\d+(?:[.,.]\d+)?)\s*km\)\s*(?:de\s*)?(?:dist[aâ]ncia|ate|até|para|pickup|coleta)/i);
+    const tripMatch = text.match(/(?:viagem|trip|trajeto|corrida)\D{0,20}(\d+(?:[.,.]\d+)?)\s*min(?:uto|utos)?\s*\((\d+(?:[.,.]\d+)?)\s*km\)/i);
+    let fare = fareMatch ? n(fareMatch[1]) : 0;
+    let pickupMin = pickupMatch ? n(pickupMatch[1]) : 0;
+    let pickupKm = pickupMatch ? n(pickupMatch[2]) : 0;
+    let tripMin = tripMatch ? n(tripMatch[1]) : 0;
+    let tripKm = tripMatch ? n(tripMatch[2]) : 0;
+    const allMinKm = [...text.matchAll(/(\d+(?:[.,.]\d+)?)\s*min(?:uto|utos)?\s*\((\d+(?:[.,.]\d+)?)\s*km\)/gi)].map(m => ({ min: n(m[1]), km: n(m[2]) }));
+    if ((!pickupMin || !pickupKm) && allMinKm[0]) { pickupMin = allMinKm[0].min; pickupKm = allMinKm[0].km; }
+    if ((!tripMin || !tripKm) && allMinKm[1]) { tripMin = allMinKm[1].min; tripKm = allMinKm[1].km; }
+    const totalKmMatch = text.match(/(?:total|km total|distancia total|distância total)\D{0,12}(\d+(?:[.,.]\d+)?)\s*km/i);
+    const totalMinMatch = text.match(/(?:total|tempo total)\D{0,12}(\d+(?:[.,.]\d+)?)\s*min/i);
+    return {
+      fare,
+      pickup_km: r(pickupKm),
+      trip_km: r(tripKm),
+      total_km: r(totalKmMatch ? n(totalKmMatch[1]) : pickupKm + tripKm),
+      pickup_min: r(pickupMin),
+      trip_min: r(tripMin),
+      total_min: r(totalMinMatch ? n(totalMinMatch[1]) : pickupMin + tripMin),
+      raw_text: rawText,
+      parsed_from_text: true
+    };
+  }
   function analyze(body, session) {
     const fare = r(body.fare || body.valor || body.amount);
     const pickupKm = r(body.pickup_km || body.km_ate_passageiro);
@@ -63,15 +101,28 @@ module.exports = function registerRadar(app, pool) {
     const classification = classify(netPerKm, netPerHour, estimatedProfit);
     return { fare, pickupKm, tripKm, totalKm, pickupMin, tripMin, totalMin, costPerKm, estimatedCost, estimatedProfit, grossPerKm, netPerKm, grossPerHour, netPerHour, classification, message: message(classification, fare, totalKm, totalMin, netPerKm, netPerHour, estimatedProfit) };
   }
+  async function saveAnalysis(req, res, body, session) {
+    const a = analyze(body || {}, session);
+    if (a.fare <= 0) return res.status(400).json({ error: 'Informe o valor da corrida.', parsed: body });
+    if (a.totalKm <= 0 && a.totalMin <= 0) return res.status(400).json({ error: 'Informe km ou minutos da corrida.', parsed: body });
+    const row = await one(`INSERT INTO radar_events(session_id,platform,fare,pickup_km,trip_km,total_km,pickup_min,trip_min,total_min,gross_per_km,net_per_km,gross_per_hour,net_per_hour,estimated_cost,estimated_profit,classification,decision,raw_text,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'PENDENTE',$17,$18) RETURNING *`, [session?.id || null, body.platform || body.plataforma || session?.platform || 'Uber', a.fare, a.pickupKm, a.tripKm, a.totalKm, a.pickupMin, a.tripMin, a.totalMin, a.grossPerKm, a.netPerKm, a.grossPerHour, a.netPerHour, a.estimatedCost, a.estimatedProfit, a.classification, body.raw_text || '', now()]);
+    return res.status(201).json({ ok: true, id: row.id, event: row, analysis: a, parsed: body.parsed_from_text ? body : undefined, actions: { aceitar: `/api/radar/${row.id}/aceitar`, recusar: `/api/radar/${row.id}/recusar` } });
+  }
   app.post('/api/radar/analisar', auth, async (req, res, next) => {
     try {
       await ensure();
       const session = await activeSession();
-      const a = analyze(req.body || {}, session);
-      if (a.fare <= 0) return res.status(400).json({ error: 'Informe o valor da corrida.' });
-      if (a.totalKm <= 0 && a.totalMin <= 0) return res.status(400).json({ error: 'Informe km ou minutos da corrida.' });
-      const row = await one(`INSERT INTO radar_events(session_id,platform,fare,pickup_km,trip_km,total_km,pickup_min,trip_min,total_min,gross_per_km,net_per_km,gross_per_hour,net_per_hour,estimated_cost,estimated_profit,classification,decision,raw_text,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'PENDENTE',$17,$18) RETURNING *`, [session?.id || null, req.body.platform || req.body.plataforma || session?.platform || 'Uber', a.fare, a.pickupKm, a.tripKm, a.totalKm, a.pickupMin, a.tripMin, a.totalMin, a.grossPerKm, a.netPerKm, a.grossPerHour, a.netPerHour, a.estimatedCost, a.estimatedProfit, a.classification, req.body.raw_text || '', now()]);
-      res.status(201).json({ ok: true, id: row.id, event: row, analysis: a, actions: { aceitar: `/api/radar/${row.id}/aceitar`, recusar: `/api/radar/${row.id}/recusar` } });
+      return saveAnalysis(req, res, req.body || {}, session);
+    } catch (e) { next(e); }
+  });
+  app.post('/api/radar/analisar-texto', auth, async (req, res, next) => {
+    try {
+      await ensure();
+      const session = await activeSession();
+      const raw = req.body?.raw_text || req.body?.text || req.body?.texto || '';
+      const parsed = parseOfferText(raw);
+      parsed.platform = req.body?.platform || req.body?.plataforma || 'Uber';
+      return saveAnalysis(req, res, parsed, session);
     } catch (e) { next(e); }
   });
   app.post('/api/radar/:id/aceitar', auth, async (req, res, next) => {
