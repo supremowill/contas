@@ -22,7 +22,7 @@
     <header class="top">
       <div>
         <h1>Controle do Passe Uber</h1>
-        <p>Dashboard com passe, KM do painel, ganhos, despesas, gráficos e líquido real.</p>
+        <p>Dashboard com passe, KM vindo do MacroDroid, ganhos, despesas, gráficos e líquido real.</p>
       </div>
       <div class="top-actions">
         <a class="primary link" href="/api/export.csv" target="_blank">Exportar CSV</a>
@@ -70,12 +70,18 @@
           <div class="panel"><h2>Resumo financeiro</h2><div class="cards" id="financeCards"></div></div>
         </div>
         <div class="grid two"><div class="panel"><h2>Operação</h2><div class="cards" id="operationCards"></div></div><div class="panel"><h2>Veículo e custos</h2><div class="cards" id="costCards"></div></div></div>
+        <div class="quick-panel panel">
+          <div>
+            <h2>Lançamento rápido</h2>
+            <p class="hint">Use o botão flutuante no canto inferior direito para adicionar entrada ou despesa sem rolar a página. O KM das corridas agora vem do MacroDroid.</p>
+          </div>
+          <div class="actions">
+            <button class="primary" onclick="openQuickModal('entry')">+ Entrada</button>
+            <button class="ghost" onclick="openQuickModal('expense')">+ Despesa</button>
+          </div>
+        </div>
         <div class="grid two"><div class="panel chart-card"><h2>Composição do dinheiro</h2><canvas id="donutChart" height="260"></canvas></div><div class="panel chart-card"><h2>Evolução acumulada</h2><canvas id="lineChart" height="260"></canvas></div></div>
         <div class="grid two"><div class="panel chart-card"><h2>Ganhos, corridas e KM</h2><canvas id="barChart" height="260"></canvas></div><div class="panel chart-card"><h2>Despesas por categoria</h2><canvas id="expenseChart" height="260"></canvas></div></div>
-        <div class="grid two">
-          <div class="panel"><h2>Adicionar ganho</h2><p class="hint">Lance uma corrida ou bloco: valor bruto, quantidade de corridas e KM atual do painel.</p><div class="grid two"><div><label>Valor ganho</label><input id="entryAmount" type="number" step="0.01" placeholder="Ex: 180" /></div><div><label>Qtd. corridas</label><input id="entryRides" type="number" step="1" value="1" /></div><div><label>KM atual do painel</label><input id="entryOdometer" type="number" step="0.1" placeholder="Ex: 240140" /></div><div><label>Horário</label><input id="entryTime" type="datetime-local" /></div></div><label>Observação</label><input id="entryNote" placeholder="Ex: bloco da manhã" /><button class="primary" onclick="addEntry()">Adicionar ganho</button></div>
-          <div class="panel"><h2>Adicionar despesa</h2><p class="hint">Combustível, alimentação, pedágio, estacionamento, lavagem, manutenção ou outros.</p><div class="grid two"><div><label>Categoria</label><select id="expenseCategory"><option>Combustível</option><option>Alimentação</option><option>Pedágio</option><option>Estacionamento</option><option>Lavagem</option><option>Manutenção</option><option>Parcela/diária</option><option>Outros</option></select></div><div><label>Valor</label><input id="expenseAmount" type="number" step="0.01" placeholder="Ex: 50" /></div><div><label>Horário</label><input id="expenseTime" type="datetime-local" /></div><div><label>Observação</label><input id="expenseNote" placeholder="Ex: abastecimento" /></div></div><button class="primary" onclick="addExpense()">Adicionar despesa</button></div>
-        </div>
         <div class="grid two"><div class="panel"><h2>Lançamentos de ganhos</h2><div id="entriesList"></div></div><div class="panel"><h2>Despesas</h2><div id="expensesList"></div></div></div>
         <div class="panel pass-info" id="activeInfo"></div>
       </div>
@@ -84,6 +90,45 @@
     <section id="historico" class="section"><div class="panel"><h2>Histórico</h2><div class="filters"><button onclick="historyFilter='all';renderHistory()">Todos</button><button onclick="historyFilter='today';renderHistory()">Hoje</button><button onclick="historyFilter='7';renderHistory()">Últimos 7 dias</button><button onclick="historyFilter='month';renderHistory()">Este mês</button></div><div class="table-wrap"><table><thead><tr><th>Início</th><th>Situação</th><th>Tipo</th><th>Bruto</th><th>KM</th><th>Corridas</th><th>Despesas</th><th>Líquido real</th><th>R$/km</th><th>R$/h</th><th>Margem</th><th>Status</th><th>Ações</th></tr></thead><tbody id="historyBody"></tbody></table></div></div></section>
     <section id="relatorios" class="section"><div class="panel"><h2>Relatórios</h2><div class="filters"><button onclick="loadReport('daily')">Diário</button><button onclick="loadReport('weekly')">Semanal</button><button onclick="loadReport('monthly')">Mensal</button></div><p id="reportTitle" class="hint">Resumo diário</p><div class="table-wrap"><table><thead><tr><th>Período</th><th>Passes</th><th>Bruto</th><th>KM</th><th>Corridas</th><th>Despesas</th><th>Líquido</th><th>R$/km</th><th>R$/h</th><th>Margem</th><th>Status</th></tr></thead><tbody id="reportBody"></tbody></table></div></div></section>
   </main>
+
+  <button class="fab" onclick="openQuickModal('entry')" aria-label="Adicionar lançamento"><span>+</span><small>Lançar</small></button>
+
+  <div class="modal-backdrop" id="quickModal" aria-hidden="true" onclick="modalBackdropClick(event)">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="quickModalTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="quickModalTitle">Lançamento rápido</h2>
+          <p class="hint">Entrada manual sem KM. O KM das corridas vem do MacroDroid.</p>
+        </div>
+        <button class="modal-close" onclick="closeQuickModal()" aria-label="Fechar">×</button>
+      </div>
+      <div class="mode-tabs">
+        <button class="mode-btn active" data-mode="entry" onclick="setQuickMode('entry')">Entrada</button>
+        <button class="mode-btn" data-mode="expense" onclick="setQuickMode('expense')">Despesa</button>
+      </div>
+
+      <div id="quickEntryForm" class="quick-form">
+        <div class="grid two">
+          <div><label>Valor ganho</label><input id="entryAmount" type="number" step="0.01" placeholder="Ex: 32,50" /></div>
+          <div><label>Qtd. corridas</label><input id="entryRides" type="number" step="1" value="1" /></div>
+          <div><label>Horário</label><input id="entryTime" type="datetime-local" /></div>
+          <div><label>Observação</label><input id="entryNote" placeholder="Ex: ajuste manual" /></div>
+        </div>
+        <button class="primary full" onclick="addEntry()">Salvar entrada</button>
+      </div>
+
+      <div id="quickExpenseForm" class="quick-form" style="display:none">
+        <div class="grid two">
+          <div><label>Categoria</label><select id="expenseCategory"><option>Combustível</option><option>Alimentação</option><option>Pedágio</option><option>Estacionamento</option><option>Lavagem</option><option>Manutenção</option><option>Parcela/diária</option><option>Outros</option></select></div>
+          <div><label>Valor</label><input id="expenseAmount" type="number" step="0.01" placeholder="Ex: 50" /></div>
+          <div><label>Horário</label><input id="expenseTime" type="datetime-local" /></div>
+          <div><label>Observação</label><input id="expenseNote" placeholder="Ex: abastecimento" /></div>
+        </div>
+        <button class="primary full" onclick="addExpense()">Salvar despesa</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/app.js"></script>
 </body>
 </html>
