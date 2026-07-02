@@ -54,6 +54,7 @@ async function init() {
       category TEXT DEFAULT 'Outros',
       amount NUMERIC(12,2) DEFAULT 0,
       affects_wallet BOOLEAN DEFAULT true,
+      affects_profit BOOLEAN DEFAULT true,
       note TEXT DEFAULT '',
       created_at TEXT NOT NULL
     );
@@ -63,12 +64,15 @@ async function init() {
     ALTER TABLE entries ADD COLUMN IF NOT EXISTS current_odometer NUMERIC(12,2) DEFAULT 0;
     ALTER TABLE entries ADD COLUMN IF NOT EXISTS affects_wallet BOOLEAN DEFAULT true;
     ALTER TABLE expenses ADD COLUMN IF NOT EXISTS affects_wallet BOOLEAN DEFAULT true;
+    ALTER TABLE expenses ADD COLUMN IF NOT EXISTS affects_profit BOOLEAN DEFAULT true;
   `);
 }
 
 function stat(p,g){ if(!g) return {key:'empty',label:'Sem ganho'}; if(p>25) return {key:'bad',label:'Pesado demais'}; if(p>20) return {key:'warning',label:'Ainda pesado'}; if(p>15) return {key:'limit',label:'No limite'}; return {key:'good',label:'Saudavel'}; }
 function elapsed(s){ const a = new Date(s.started_at), b = new Date(s.ended_at), c = new Date(); return Math.max(((c>b?b:c)-a)/3600000,0); }
 function affectsWallet(row){ return row.affects_wallet !== false && row.affects_wallet !== 'false'; }
+function isFuelCategory(category=''){ return /combust|gasolina|etanol|gnv|abastec/i.test(String(category)); }
+function affectsProfit(row){ return !isFuelCategory(row.category) && row.affects_profit !== false && row.affects_profit !== 'false'; }
 function afterWalletStamp(row, stamp){ return !!stamp && !!row.created_at && String(row.created_at) > String(stamp); }
 
 async function build(s){
@@ -85,9 +89,11 @@ async function build(s){
   const gross=entries.reduce((a,e)=>a+n(e.amount),0);
   const rides=entries.reduce((a,e)=>a+i(e.rides_count),0);
   const kmTotal=n(s.start_odometer)>0 && latest>=n(s.start_odometer) ? latest-n(s.start_odometer) : entries.reduce((a,e)=>a+n(e.km_delta),0);
-  const pass=n(s.pass_price), kmCost=kmTotal*n(s.cost_per_km,.81), extra=expenses.reduce((a,e)=>a+n(e.amount),0), total=pass+kmCost+extra, net=gross-total, h=elapsed(s), passPct=gross?pass/gross*100:0, meta15=pass?pass/.15:0;
+  const profitExpenses = expenses.filter(affectsProfit);
+  const walletOnlyExpenses = expenses.filter(e=>!affectsProfit(e) && affectsWallet(e)).reduce((a,e)=>a+n(e.amount),0);
+  const pass=n(s.pass_price), kmCost=kmTotal*n(s.cost_per_km,.81), extra=profitExpenses.reduce((a,e)=>a+n(e.amount),0), total=pass+kmCost+extra, net=gross-total, h=elapsed(s), passPct=gross?pass/gross*100:0, meta15=pass?pass/.15:0;
   const cats={};
-  expenses.forEach(e=>{ const c=e.category||'Outros'; cats[c]=r((cats[c]||0)+n(e.amount)); });
+  profitExpenses.forEach(e=>{ const c=e.category||'Outros'; cats[c]=r((cats[c]||0)+n(e.amount)); });
 
   const walletUpdatedAt = s.wallet_updated_at || '';
   const walletBase = n(s.wallet_balance);
@@ -104,6 +110,7 @@ async function build(s){
     latest_odometer:r(latest),
     km_cost:r(kmCost),
     extra_expenses:r(extra),
+    wallet_only_expenses:r(walletOnlyExpenses),
     expenses_by_category:cats,
     total_expenses:r(total),
     net_simple:r(gross-pass),
@@ -149,7 +156,7 @@ app.post('/api/sessions/:id/wallet',guard,async(req,res,next)=>{try{const amount
 app.delete('/api/sessions/:id',guard,async(req,res,next)=>{try{await pool.query('DELETE FROM sessions WHERE id=$1',[req.params.id]);res.json({ok:true})}catch(e){next(e)}});
 app.post('/api/sessions/:id/entries',guard,async(req,res,next)=>{try{const s=await one('SELECT * FROM sessions WHERE id=$1',[req.params.id]);if(!s)return res.status(404).json({error:'Passe nao encontrado'});const amount=r(req.body.amount);if(amount<=0)return res.status(400).json({error:'Ganho invalido'});const cur=Math.max(r(req.body.current_odometer),0),last=(await q('SELECT current_odometer FROM entries WHERE session_id=$1 AND current_odometer>0 ORDER BY created_at DESC,id DESC LIMIT 1',[s.id]))[0],lastKm=last?n(last.current_odometer):n(s.start_odometer);if(cur>0&&lastKm>0&&cur<lastKm)return res.status(400).json({error:'KM atual menor que o ultimo informado'});const e=await one('INSERT INTO entries(session_id,amount,rides_count,km,current_odometer,affects_wallet,note,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[s.id,amount,Math.max(i(req.body.rides_count),0),0,cur,yn(req.body.affects_wallet,true),req.body.note||'',req.body.created_at||now()]);res.status(201).json(e)}catch(e){next(e)}});
 app.delete('/api/entries/:id',guard,async(req,res,next)=>{try{await pool.query('DELETE FROM entries WHERE id=$1',[req.params.id]);res.json({ok:true})}catch(e){next(e)}});
-app.post('/api/sessions/:id/expenses',guard,async(req,res,next)=>{try{const amount=r(req.body.amount);if(amount<=0)return res.status(400).json({error:'Despesa invalida'});const e=await one('INSERT INTO expenses(session_id,category,amount,affects_wallet,note,created_at) VALUES($1,$2,$3,$4,$5,$6) RETURNING *',[req.params.id,req.body.category||'Outros',amount,yn(req.body.affects_wallet,true),req.body.note||'',req.body.created_at||now()]);res.status(201).json(e)}catch(e){next(e)}});
+app.post('/api/sessions/:id/expenses',guard,async(req,res,next)=>{try{const amount=r(req.body.amount);if(amount<=0)return res.status(400).json({error:'Despesa invalida'});const category=req.body.category||'Outros';const profit=!isFuelCategory(category)&&yn(req.body.affects_profit,true);const e=await one('INSERT INTO expenses(session_id,category,amount,affects_wallet,affects_profit,note,created_at) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *',[req.params.id,category,amount,yn(req.body.affects_wallet,true),profit,req.body.note||'',req.body.created_at||now()]);res.status(201).json(e)}catch(e){next(e)}});
 app.delete('/api/expenses/:id',guard,async(req,res,next)=>{try{await pool.query('DELETE FROM expenses WHERE id=$1',[req.params.id]);res.json({ok:true})}catch(e){next(e)}});
 app.get('/api/reports',guard,async(req,res,next)=>{try{res.json((await all()).map(s=>({period:s.started_at.slice(0,10),sessions_count:1,total_gross:s.summary.total_gross,total_km:s.summary.total_km,total_rides:s.summary.total_rides,total_expenses:s.summary.total_expenses,total_net_real:s.summary.net_real,gross_per_km:s.summary.gross_per_km,net_per_km:s.summary.net_per_km,gross_per_hour:s.summary.gross_per_hour,net_per_hour:s.summary.net_per_hour,margin_real_percent:s.summary.margin_real_percent,status:s.summary.status})))}catch(e){next(e)}});
 app.get('/api/export.csv',guard,async(req,res,next)=>{try{res.setHeader('Content-Type','text/csv; charset=utf-8');res.send('id;bruto;liquido\n'+(await all()).map(s=>`${s.id};${s.summary.total_gross};${s.summary.net_real}`).join('\n'))}catch(e){next(e)}});
