@@ -22,7 +22,7 @@
     <header class="top">
       <div>
         <h1>Controle do Passe Uber</h1>
-        <p>Dashboard com passe, KM vindo do MacroDroid, ganhos, despesas, gráficos e líquido real.</p>
+        <p>Dashboard com passe, KM vindo do MacroDroid, carteira, ganhos, despesas, gráficos e líquido real.</p>
       </div>
       <div class="top-actions">
         <a class="primary link" href="/api/export.csv" target="_blank">Exportar CSV</a>
@@ -69,15 +69,26 @@
           </div>
           <div class="panel"><h2>Resumo financeiro</h2><div class="cards" id="financeCards"></div></div>
         </div>
+        <div class="panel wallet-panel">
+          <div class="wallet-head">
+            <div>
+              <h2>Carteira</h2>
+              <p class="hint">Informe quanto tem na carteira para comparar com o lucro real e acompanhar a diferença.</p>
+            </div>
+            <button class="primary" onclick="openQuickModal('wallet')">Atualizar carteira</button>
+          </div>
+          <div class="cards" id="walletCards"></div>
+        </div>
         <div class="grid two"><div class="panel"><h2>Operação</h2><div class="cards" id="operationCards"></div></div><div class="panel"><h2>Veículo e custos</h2><div class="cards" id="costCards"></div></div></div>
         <div class="quick-panel panel">
           <div>
             <h2>Lançamento rápido</h2>
-            <p class="hint">Use o botão flutuante no canto inferior direito para adicionar entrada ou despesa sem rolar a página. O KM das corridas agora vem do MacroDroid.</p>
+            <p class="hint">Use o botão flutuante para entrada, despesa ou carteira. Na despesa, escolha se ela descontou da carteira.</p>
           </div>
           <div class="actions">
             <button class="primary" onclick="openQuickModal('entry')">+ Entrada</button>
             <button class="ghost" onclick="openQuickModal('expense')">+ Despesa</button>
+            <button class="ghost" onclick="openQuickModal('wallet')">Carteira</button>
           </div>
         </div>
         <div class="grid two"><div class="panel chart-card"><h2>Composição do dinheiro</h2><canvas id="donutChart" height="260"></canvas></div><div class="panel chart-card"><h2>Evolução acumulada</h2><canvas id="lineChart" height="260"></canvas></div></div>
@@ -87,7 +98,7 @@
       </div>
     </section>
 
-    <section id="historico" class="section"><div class="panel"><h2>Histórico</h2><div class="filters"><button onclick="historyFilter='all';renderHistory()">Todos</button><button onclick="historyFilter='today';renderHistory()">Hoje</button><button onclick="historyFilter='7';renderHistory()">Últimos 7 dias</button><button onclick="historyFilter='month';renderHistory()">Este mês</button></div><div class="table-wrap"><table><thead><tr><th>Início</th><th>Situação</th><th>Tipo</th><th>Bruto</th><th>KM</th><th>Corridas</th><th>Despesas</th><th>Líquido real</th><th>R$/km</th><th>R$/h</th><th>Margem</th><th>Status</th><th>Ações</th></tr></thead><tbody id="historyBody"></tbody></table></div></div></section>
+    <section id="historico" class="section"><div class="panel"><h2>Histórico</h2><div class="filters"><button onclick="historyFilter='all';renderHistory()">Todos</button><button onclick="historyFilter='today';renderHistory()">Hoje</button><button onclick="historyFilter='7';renderHistory()">Últimos 7 dias</button><button onclick="historyFilter='month';renderHistory()">Este mês</button></div><div class="table-wrap"><table><thead><tr><th>Início</th><th>Situação</th><th>Tipo</th><th>Bruto</th><th>KM</th><th>Corridas</th><th>Despesas</th><th>Líquido real</th><th>Carteira</th><th>R$/km</th><th>R$/h</th><th>Margem</th><th>Status</th><th>Ações</th></tr></thead><tbody id="historyBody"></tbody></table></div></div></section>
     <section id="relatorios" class="section"><div class="panel"><h2>Relatórios</h2><div class="filters"><button onclick="loadReport('daily')">Diário</button><button onclick="loadReport('weekly')">Semanal</button><button onclick="loadReport('monthly')">Mensal</button></div><p id="reportTitle" class="hint">Resumo diário</p><div class="table-wrap"><table><thead><tr><th>Período</th><th>Passes</th><th>Bruto</th><th>KM</th><th>Corridas</th><th>Despesas</th><th>Líquido</th><th>R$/km</th><th>R$/h</th><th>Margem</th><th>Status</th></tr></thead><tbody id="reportBody"></tbody></table></div></div></section>
   </main>
 
@@ -98,13 +109,14 @@
       <div class="modal-head">
         <div>
           <h2 id="quickModalTitle">Lançamento rápido</h2>
-          <p class="hint">Entrada manual sem KM. O KM das corridas vem do MacroDroid.</p>
+          <p class="hint" id="quickModalHint">Entrada manual sem KM. O KM das corridas vem do MacroDroid.</p>
         </div>
         <button class="modal-close" onclick="closeQuickModal()" aria-label="Fechar">×</button>
       </div>
-      <div class="mode-tabs">
+      <div class="mode-tabs three">
         <button class="mode-btn active" data-mode="entry" onclick="setQuickMode('entry')">Entrada</button>
         <button class="mode-btn" data-mode="expense" onclick="setQuickMode('expense')">Despesa</button>
+        <button class="mode-btn" data-mode="wallet" onclick="setQuickMode('wallet')">Carteira</button>
       </div>
 
       <div id="quickEntryForm" class="quick-form">
@@ -114,6 +126,7 @@
           <div><label>Horário</label><input id="entryTime" type="datetime-local" /></div>
           <div><label>Observação</label><input id="entryNote" placeholder="Ex: ajuste manual" /></div>
         </div>
+        <label class="check-row"><input id="entryAffectsWallet" type="checkbox" checked /> Somar esta entrada na carteira</label>
         <button class="primary full" onclick="addEntry()">Salvar entrada</button>
       </div>
 
@@ -124,7 +137,18 @@
           <div><label>Horário</label><input id="expenseTime" type="datetime-local" /></div>
           <div><label>Observação</label><input id="expenseNote" placeholder="Ex: abastecimento" /></div>
         </div>
+        <label class="check-row"><input id="expenseAffectsWallet" type="checkbox" checked /> Descontar da carteira</label>
+        <p class="hint">Marcado: saiu do dinheiro que está na carteira. Desmarcado: entra no lucro/custo, mas não mexe na carteira.</p>
         <button class="primary full" onclick="addExpense()">Salvar despesa</button>
+      </div>
+
+      <div id="quickWalletForm" class="quick-form" style="display:none">
+        <div class="grid two">
+          <div><label>Quanto tenho na carteira agora</label><input id="walletAmount" type="number" step="0.01" placeholder="Ex: 185,40" /></div>
+          <div><label>Horário da conferência</label><input id="walletTime" type="datetime-local" /></div>
+        </div>
+        <p class="hint">Esse valor vira a base da carteira. Depois o sistema soma entradas e desconta as despesas marcadas como “descontar da carteira”.</p>
+        <button class="primary full" onclick="saveWallet()">Atualizar carteira</button>
       </div>
     </div>
   </div>
