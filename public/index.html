@@ -22,7 +22,7 @@
     <header class="top">
       <div>
         <h1>Controle do Passe Uber</h1>
-        <p>Dashboard com passe, KM vindo do MacroDroid, carteira, ganhos, despesas, gráficos e líquido real.</p>
+        <p>Dashboard com passe, dia, semana, mês, carteira, KM do MacroDroid, horários fortes e lucro real.</p>
       </div>
       <div class="top-actions">
         <a class="primary link" href="/api/export.csv" target="_blank">Exportar CSV</a>
@@ -60,41 +60,102 @@
     </section>
 
     <section id="dashboard" class="section active">
-      <div id="emptyActive" class="panel empty"><h2>Nenhum passe vigente</h2><p>Crie um passe novo para começar.</p><button class="primary" onclick="showTab('novo')">Criar passe</button></div>
+      <div id="emptyActive" class="panel empty"><h2>Nenhum passe vigente</h2><p>Crie um passe novo para ver o painel do passe. As abas Dia, Semana e Mês continuam usando o histórico.</p><button class="primary" onclick="showTab('novo')">Criar passe</button></div>
       <div id="activeWrap">
         <div class="executive" id="executiveBox"></div>
-        <div class="dash-grid">
-          <div class="panel gauge-panel">
-            <div class="mini">Peso do passe</div><div class="big-percent" id="percentText">0%</div><div class="status" id="statusText">Sem ganho</div><div class="bar"><div id="barFill"></div></div><canvas id="gaugeChart" height="150"></canvas>
-          </div>
-          <div class="panel"><h2>Resumo financeiro</h2><div class="cards" id="financeCards"></div></div>
+
+        <div class="smart-tabs panel">
+          <button class="smart-tab active" data-dash="pass" onclick="showDashMode('pass')">Passe ativo</button>
+          <button class="smart-tab" data-dash="day" onclick="showDashMode('day')">Dia</button>
+          <button class="smart-tab" data-dash="week" onclick="showDashMode('week')">Semana</button>
+          <button class="smart-tab" data-dash="month" onclick="showDashMode('month')">Mês</button>
         </div>
-        <div class="panel wallet-panel">
-          <div class="wallet-head">
-            <div>
-              <h2>Carteira</h2>
-              <p class="hint">Informe quanto tem na carteira para comparar com o lucro real e acompanhar a diferença.</p>
+
+        <div id="passDash" class="dash-view active">
+          <div class="dash-grid">
+            <div class="panel gauge-panel">
+              <div class="mini">Peso do passe</div><div class="big-percent" id="percentText">0%</div><div class="status" id="statusText">Sem ganho</div><div class="bar"><div id="barFill"></div></div><canvas id="gaugeChart" height="150"></canvas>
             </div>
-            <button class="primary" onclick="openQuickModal('wallet')">Atualizar carteira</button>
+            <div class="panel"><h2>Resumo financeiro</h2><div class="cards" id="financeCards"></div></div>
           </div>
-          <div class="cards" id="walletCards"></div>
+          <div class="panel wallet-panel">
+            <div class="wallet-head">
+              <div>
+                <h2>Carteira</h2>
+                <p class="hint">Informe quanto tem na carteira para comparar com o lucro real e acompanhar a diferença.</p>
+              </div>
+              <button class="primary" onclick="openQuickModal('wallet')">Atualizar carteira</button>
+            </div>
+            <div class="cards" id="walletCards"></div>
+          </div>
+          <div class="grid two"><div class="panel"><h2>Operação</h2><div class="cards" id="operationCards"></div></div><div class="panel"><h2>Veículo e custos</h2><div class="cards" id="costCards"></div></div></div>
+          <div class="quick-panel panel">
+            <div>
+              <h2>Lançamento rápido</h2>
+              <p class="hint">Use o botão flutuante para entrada, despesa ou carteira. Na despesa, escolha se ela descontou da carteira.</p>
+            </div>
+            <div class="actions">
+              <button class="primary" onclick="openQuickModal('entry')">+ Entrada</button>
+              <button class="ghost" onclick="openQuickModal('expense')">+ Despesa</button>
+              <button class="ghost" onclick="openQuickModal('wallet')">Carteira</button>
+            </div>
+          </div>
+          <div class="grid two"><div class="panel chart-card"><h2>Composição do dinheiro</h2><canvas id="donutChart" height="260"></canvas></div><div class="panel chart-card"><h2>Evolução acumulada</h2><canvas id="lineChart" height="260"></canvas></div></div>
+          <div class="grid two"><div class="panel chart-card"><h2>Ganhos, corridas e KM</h2><canvas id="barChart" height="260"></canvas></div><div class="panel chart-card"><h2>Despesas por categoria</h2><canvas id="expenseChart" height="260"></canvas></div></div>
+          <div class="grid two"><div class="panel"><h2>Lançamentos de ganhos</h2><div id="entriesList"></div></div><div class="panel"><h2>Despesas</h2><div id="expensesList"></div></div></div>
+          <div class="panel pass-info" id="activeInfo"></div>
         </div>
-        <div class="grid two"><div class="panel"><h2>Operação</h2><div class="cards" id="operationCards"></div></div><div class="panel"><h2>Veículo e custos</h2><div class="cards" id="costCards"></div></div></div>
-        <div class="quick-panel panel">
-          <div>
-            <h2>Lançamento rápido</h2>
-            <p class="hint">Use o botão flutuante para entrada, despesa ou carteira. Na despesa, escolha se ela descontou da carteira.</p>
+
+        <div id="dayDash" class="dash-view">
+          <div class="panel smart-hero">
+            <div>
+              <h2>Dashboard do dia</h2>
+              <p class="hint" id="daySummaryText">Comparação com ontem, horários fortes e previsão de pico.</p>
+            </div>
+            <div class="smart-score" id="dayScore">-</div>
           </div>
-          <div class="actions">
-            <button class="primary" onclick="openQuickModal('entry')">+ Entrada</button>
-            <button class="ghost" onclick="openQuickModal('expense')">+ Despesa</button>
-            <button class="ghost" onclick="openQuickModal('wallet')">Carteira</button>
+          <div class="cards" id="dayCards"></div>
+          <div class="grid two">
+            <div class="panel chart-card"><h2>Hoje por horário</h2><canvas id="dayHourlyChart" height="260"></canvas></div>
+            <div class="panel chart-card"><h2>Hoje x ontem</h2><canvas id="dayCompareChart" height="260"></canvas></div>
           </div>
+          <div class="grid two"><div class="panel"><h2>Melhores horários de hoje</h2><div id="dayBestHours"></div></div><div class="panel"><h2>Previsão de pico</h2><div id="dayPeakForecast"></div></div></div>
+          <div class="panel"><h2>Leitura inteligente</h2><div id="dayInsights"></div></div>
         </div>
-        <div class="grid two"><div class="panel chart-card"><h2>Composição do dinheiro</h2><canvas id="donutChart" height="260"></canvas></div><div class="panel chart-card"><h2>Evolução acumulada</h2><canvas id="lineChart" height="260"></canvas></div></div>
-        <div class="grid two"><div class="panel chart-card"><h2>Ganhos, corridas e KM</h2><canvas id="barChart" height="260"></canvas></div><div class="panel chart-card"><h2>Despesas por categoria</h2><canvas id="expenseChart" height="260"></canvas></div></div>
-        <div class="grid two"><div class="panel"><h2>Lançamentos de ganhos</h2><div id="entriesList"></div></div><div class="panel"><h2>Despesas</h2><div id="expensesList"></div></div></div>
-        <div class="panel pass-info" id="activeInfo"></div>
+
+        <div id="weekDash" class="dash-view">
+          <div class="panel smart-hero">
+            <div>
+              <h2>Dashboard da semana</h2>
+              <p class="hint" id="weekSummaryText">Compara a semana atual com a semana passada e mostra os melhores dias.</p>
+            </div>
+            <div class="smart-score" id="weekScore">-</div>
+          </div>
+          <div class="cards" id="weekCards"></div>
+          <div class="grid two">
+            <div class="panel chart-card"><h2>Semana por dia</h2><canvas id="weekDaysChart" height="260"></canvas></div>
+            <div class="panel chart-card"><h2>Semana atual x passada</h2><canvas id="weekCompareChart" height="260"></canvas></div>
+          </div>
+          <div class="grid two"><div class="panel"><h2>Melhores dias</h2><div id="weekBestDays"></div></div><div class="panel"><h2>Horários fortes da semana</h2><div id="weekBestHours"></div></div></div>
+          <div class="panel"><h2>Leitura inteligente</h2><div id="weekInsights"></div></div>
+        </div>
+
+        <div id="monthDash" class="dash-view">
+          <div class="panel smart-hero">
+            <div>
+              <h2>Dashboard do mês</h2>
+              <p class="hint" id="monthSummaryText">Compara o mês atual com o mês passado e mede consistência.</p>
+            </div>
+            <div class="smart-score" id="monthScore">-</div>
+          </div>
+          <div class="cards" id="monthCards"></div>
+          <div class="grid two">
+            <div class="panel chart-card"><h2>Mês por dia</h2><canvas id="monthDaysChart" height="260"></canvas></div>
+            <div class="panel chart-card"><h2>Mês atual x passado</h2><canvas id="monthCompareChart" height="260"></canvas></div>
+          </div>
+          <div class="grid two"><div class="panel"><h2>Melhores dias do mês</h2><div id="monthBestDays"></div></div><div class="panel"><h2>Horários que mais renderam</h2><div id="monthBestHours"></div></div></div>
+          <div class="panel"><h2>Leitura inteligente</h2><div id="monthInsights"></div></div>
+        </div>
       </div>
     </section>
 
