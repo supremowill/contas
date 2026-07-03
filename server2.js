@@ -74,6 +74,18 @@ function affectsWallet(row){ return row.affects_wallet !== false && row.affects_
 function isFuelCategory(category=''){ return /combust|gasolina|etanol|gnv|abastec/i.test(String(category)); }
 function affectsProfit(row){ return !isFuelCategory(row.category) && row.affects_profit !== false && row.affects_profit !== 'false'; }
 function afterWalletStamp(row, stamp){ return !!stamp && !!row.created_at && String(row.created_at) > String(stamp); }
+function shiftTextDate(v, minutes){
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if(!m) return v;
+  const d = new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5]));
+  d.setUTCMinutes(d.getUTCMinutes() + minutes);
+  const p = x => String(x).padStart(2,'0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+}
+function fixEntryTime(e){
+  const isMacro = /Radar MacroDroid|MACRODROID/i.test(String(e.note || ''));
+  return isMacro ? shiftTextDate(e.created_at, -180) : e.created_at;
+}
 
 async function build(s){
   const raw = await q('SELECT * FROM entries WHERE session_id=$1 ORDER BY created_at ASC,id ASC',[s.id]);
@@ -84,7 +96,7 @@ async function build(s){
     let delta=n(e.km);
     if(prev>0 && cur>=prev) delta=cur-prev;
     if(cur>0){prev=cur;latest=cur;}
-    return {...e,km_delta:r(delta)};
+    return {...e,created_at:fixEntryTime(e),km_delta:r(delta)};
   });
   const gross=entries.reduce((a,e)=>a+n(e.amount),0);
   const rides=entries.reduce((a,e)=>a+i(e.rides_count),0);
