@@ -26,6 +26,13 @@
     form.insertBefore(hint, checkRow || form.querySelector('button'));
   }
 
+  function loadCompareFix(){
+    if(document.querySelector('script[src="/dashboard-compare-fix.js"]')) return;
+    const s = document.createElement('script');
+    s.src = '/dashboard-compare-fix.js?v=2';
+    document.body.appendChild(s);
+  }
+
   async function addEntryWithKm(){
     try{
       const rideType = el('entryRideType') ? el('entryRideType').value : 'Uber';
@@ -62,6 +69,7 @@
 
   function install(){
     ensureManualRideFields();
+    loadCompareFix();
     if(typeof api !== 'function' || typeof loadData !== 'function'){
       setTimeout(install, 300);
       return;
