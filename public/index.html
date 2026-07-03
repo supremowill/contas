@@ -92,7 +92,7 @@
           <div class="quick-panel panel">
             <div>
               <h2>Lançamento rápido</h2>
-              <p class="hint">Use o botão flutuante para entrada, despesa ou carteira. Na despesa, escolha se ela descontou da carteira.</p>
+              <p class="hint">Use o botão flutuante para entrada, despesa ou carteira. Na entrada manual, informe o KM quando for corrida particular/manual.</p>
             </div>
             <div class="actions">
               <button class="primary" onclick="openQuickModal('entry')">+ Entrada</button>
@@ -115,10 +115,7 @@
             <div class="smart-score" id="dayScore">-</div>
           </div>
           <div class="cards" id="dayCards"></div>
-          <div class="grid two">
-            <div class="panel chart-card"><h2>Hoje por horário</h2><canvas id="dayHourlyChart" height="260"></canvas></div>
-            <div class="panel chart-card"><h2>Hoje x ontem</h2><canvas id="dayCompareChart" height="260"></canvas></div>
-          </div>
+          <div class="grid two"><div class="panel chart-card"><h2>Hoje por horário</h2><canvas id="dayHourlyChart" height="260"></canvas></div><div class="panel chart-card"><h2>Hoje x ontem</h2><canvas id="dayCompareChart" height="260"></canvas></div></div>
           <div class="grid two"><div class="panel"><h2>Melhores horários de hoje</h2><div id="dayBestHours"></div></div><div class="panel"><h2>Previsão de pico</h2><div id="dayPeakForecast"></div></div></div>
           <div class="panel"><h2>Leitura inteligente</h2><div id="dayInsights"></div></div>
         </div>
@@ -132,10 +129,7 @@
             <div class="smart-score" id="weekScore">-</div>
           </div>
           <div class="cards" id="weekCards"></div>
-          <div class="grid two">
-            <div class="panel chart-card"><h2>Semana por dia</h2><canvas id="weekDaysChart" height="260"></canvas></div>
-            <div class="panel chart-card"><h2>Semana atual x passada</h2><canvas id="weekCompareChart" height="260"></canvas></div>
-          </div>
+          <div class="grid two"><div class="panel chart-card"><h2>Semana por dia</h2><canvas id="weekDaysChart" height="260"></canvas></div><div class="panel chart-card"><h2>Semana atual x passada</h2><canvas id="weekCompareChart" height="260"></canvas></div></div>
           <div class="grid two"><div class="panel"><h2>Melhores dias</h2><div id="weekBestDays"></div></div><div class="panel"><h2>Horários fortes da semana</h2><div id="weekBestHours"></div></div></div>
           <div class="panel"><h2>Leitura inteligente</h2><div id="weekInsights"></div></div>
         </div>
@@ -149,10 +143,7 @@
             <div class="smart-score" id="monthScore">-</div>
           </div>
           <div class="cards" id="monthCards"></div>
-          <div class="grid two">
-            <div class="panel chart-card"><h2>Mês por dia</h2><canvas id="monthDaysChart" height="260"></canvas></div>
-            <div class="panel chart-card"><h2>Mês atual x passado</h2><canvas id="monthCompareChart" height="260"></canvas></div>
-          </div>
+          <div class="grid two"><div class="panel chart-card"><h2>Mês por dia</h2><canvas id="monthDaysChart" height="260"></canvas></div><div class="panel chart-card"><h2>Mês atual x passado</h2><canvas id="monthCompareChart" height="260"></canvas></div></div>
           <div class="grid two"><div class="panel"><h2>Melhores dias do mês</h2><div id="monthBestDays"></div></div><div class="panel"><h2>Horários que mais renderam</h2><div id="monthBestHours"></div></div></div>
           <div class="panel"><h2>Leitura inteligente</h2><div id="monthInsights"></div></div>
         </div>
@@ -170,7 +161,7 @@
       <div class="modal-head">
         <div>
           <h2 id="quickModalTitle">Lançamento rápido</h2>
-          <p class="hint" id="quickModalHint">Entrada manual sem KM. O KM das corridas vem do MacroDroid.</p>
+          <p class="hint" id="quickModalHint">Entrada manual com KM opcional. O MacroDroid já envia o KM automático das corridas capturadas.</p>
         </div>
         <button class="modal-close" onclick="closeQuickModal()" aria-label="Fechar">×</button>
       </div>
@@ -185,8 +176,11 @@
           <div><label>Valor ganho</label><input id="entryAmount" type="number" step="0.01" placeholder="Ex: 32,50" /></div>
           <div><label>Qtd. corridas</label><input id="entryRides" type="number" step="1" value="1" /></div>
           <div><label>Horário</label><input id="entryTime" type="datetime-local" /></div>
-          <div><label>Observação</label><input id="entryNote" placeholder="Ex: ajuste manual" /></div>
+          <div><label>Observação</label><input id="entryNote" placeholder="Ex: corrida particular" /></div>
+          <div><label>Tipo da corrida</label><select id="entryRideType"><option>Uber</option><option>99</option><option>Particular</option><option>Outro</option></select></div>
+          <div><label>KM da corrida</label><input id="entryKm" type="number" step="0.1" placeholder="Ex: 8.5" /></div>
         </div>
+        <p class="hint">Para corrida manual ou particular, informe o KM. Corridas capturadas pelo MacroDroid já trazem KM automaticamente.</p>
         <label class="check-row"><input id="entryAffectsWallet" type="checkbox" checked /> Somar esta entrada na carteira</label>
         <button class="primary full" onclick="addEntry()">Salvar entrada</button>
       </div>
@@ -215,5 +209,6 @@
   </div>
 
   <script src="/app.js"></script>
+  <script src="/manual-ride.js"></script>
 </body>
 </html>
