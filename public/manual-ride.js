@@ -21,7 +21,7 @@
     const hint = document.createElement('p');
     hint.className = 'hint';
     hint.id = 'manualRideHint';
-    hint.textContent = 'Para corrida particular/manual, informe o KM percorrido. Esse KM entra no custo por km, R$/km, lucro real e dashboards de dia/semana/mês.';
+    hint.textContent = 'O MacroDroid já envia o KM automático. Use este campo quando lançar corrida manual ou particular.';
     const checkRow = form.querySelector('.check-row');
     form.insertBefore(hint, checkRow || form.querySelector('button'));
   }
@@ -29,25 +29,26 @@
   async function addEntryWithKm(){
     try{
       const rideType = el('entryRideType') ? el('entryRideType').value : 'Uber';
+      const amount = toNumber(el('entryAmount') ? el('entryAmount').value : 0);
       const distanceKm = toNumber(el('entryKm') ? el('entryKm').value : 0);
       const rawNote = el('entryNote') ? el('entryNote').value.trim() : '';
-      const notePrefix = rideType && rideType !== 'Uber' ? `[${rideType}] ` : '';
-      const note = `${notePrefix}${rawNote}`.trim();
+      if(amount <= 0) throw new Error('Informe o valor ganho.');
 
+      const notePrefix = rideType ? '[' + rideType + '] ' : '';
       const body = {
-        amount: Number(el('entryAmount').value),
-        rides_count: Number(el('entryRides').value || 1),
+        amount: amount,
+        rides_count: Number(el('entryRides') ? (el('entryRides').value || 1) : 1),
         km: distanceKm,
         current_odometer: 0,
         affects_wallet: el('entryAffectsWallet') ? el('entryAffectsWallet').checked !== false : true,
         created_at: (el('entryTime') && el('entryTime').value) || nowValue(),
-        note
+        note: (notePrefix + rawNote).trim()
       };
 
-      await api(`/api/sessions/${activeSessionId}/entries`, { method:'POST', body: JSON.stringify(body) });
+      await api('/api/sessions/' + activeSessionId + '/entries', { method:'POST', body: JSON.stringify(body) });
 
       el('entryAmount').value = '';
-      el('entryRides').value = '1';
+      if(el('entryRides')) el('entryRides').value = '1';
       if(el('entryKm')) el('entryKm').value = '';
       if(el('entryRideType')) el('entryRideType').value = 'Uber';
       if(el('entryTime')) el('entryTime').value = nowValue();
@@ -71,6 +72,5 @@
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
   else install();
-
   setInterval(ensureManualRideFields, 1000);
 })();
