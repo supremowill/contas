@@ -1,3 +1,47 @@
+function flatEntries(){
+  return sessions.flatMap(s => (s.entries || []).map(e => ({
+    ...e,
+    session_id: s.id,
+    cost_per_km: num(s.cost_per_km, .81),
+    date: String(e.created_at || '').slice(0, 10),
+    hour: Number(String(e.created_at || 'T00').split('T')[1]?.slice(0, 2) || 0),
+    affects_wallet: e.affects_wallet !== false && e.affects_wallet !== 'false'
+  })));
+}
+
+function metrics(start, end){
+  const rge = rangeKeys(start, end);
+  const es = flatEntries().filter(e => inRange(e, rge));
+  const xs = flatExpenses().filter(e => inRange(e, rge));
+  const gross = es.reduce((a,e) => a + num(e.amount), 0);
+  const rides = es.reduce((a,e) => a + num(e.rides_count), 0);
+  const kmt = es.reduce((a,e) => a + num(e.km_delta), 0);
+  const kmCost = es.reduce((a,e) => a + num(e.km_delta) * num(e.cost_per_km, .81), 0);
+  const extra = xs.reduce((a,e) => a + num(e.amount), 0);
+  const net = gross - kmCost - extra;
+  const hours = new Set(es.map(e => e.date + '-' + e.hour));
+  const walletGross = es.filter(e => e.affects_wallet).reduce((a,e) => a + num(e.amount), 0);
+  const outWalletGross = es.filter(e => !e.affects_wallet).reduce((a,e) => a + num(e.amount), 0);
+  return {
+    entries: es,
+    expenses: xs,
+    gross: num(gross),
+    rides: num(rides),
+    km: num(kmt),
+    kmCost: num(kmCost),
+    extra: num(extra),
+    net: num(net),
+    activeHours: hours.size || 0,
+    grossPerKm: kmt ? gross / kmt : 0,
+    netPerKm: kmt ? net / kmt : 0,
+    avgRide: rides ? gross / rides : 0,
+    perActiveHour: hours.size ? gross / hours.size : 0,
+    walletGross: num(walletGross),
+    outWalletGross: num(outWalletGross),
+    range: rge
+  };
+}
+
 function renderWeekDash(){
   const start = startOfWeek(new Date());
   const end = addDays(start, 7);
@@ -18,12 +62,14 @@ function renderWeekDash(){
 
   if($('weekScore')) $('weekScore').textContent = statScore(atual);
   if($('weekSummaryText')) {
-    $('weekSummaryText').textContent = 'Semana atual comparada com a semana passada até agora e com a semana passada inteira, incluindo KM, horas ativas e dia por dia.';
+    $('weekSummaryText').textContent = 'Semana atual comparada com a semana passada. Entradas fora da carteira entram no bruto, KM, lucro e relatórios; só não alteram a carteira.';
   }
 
   if($('weekCards')) {
     $('weekCards').innerHTML =
-      card('Bruto semana atual', brl(atual.gross), 'info', 'semana passada até agora: ' + brl(passadaAteAgora.gross)) +
+      card('Bruto semana atual', brl(atual.gross), 'info', 'inclui carteira e fora da carteira') +
+      card('Fora da carteira na semana', brl(atual.outWalletGross), atual.outWalletGross > 0 ? 'warning' : 'info', 'entra no dashboard, mas não soma na carteira') +
+      card('Na carteira na semana', brl(atual.walletGross), 'good', 'entradas que somam na carteira') +
       card('Bruto semana passada inteira', brl(passadaCheia.gross), 'purple', 'total real da semana passada') +
       card('Líquido semana atual', brl(atual.net), moneyClass(atual.net), 'semana passada até agora: ' + brl(passadaAteAgora.net)) +
       card('Líquido semana passada inteira', brl(passadaCheia.net), moneyClass(passadaCheia.net), 'total real da semana passada') +
@@ -41,7 +87,7 @@ function renderWeekDash(){
   drawCompareBars('weekCompareChart', ['Bruto','Líquido','Corridas','KM'], [atual.gross, atual.net, atual.rides, atual.km], [passadaCheia.gross, passadaCheia.net, passadaCheia.rides, passadaCheia.km]);
 
   const linhasDias = diasAtual.map((d, i) => {
-    const p = diasPassada[i] || {gross:0, net:0, rides:0, km:0, activeHours:0, perActiveHour:0, netPerKm:0};
+    const p = diasPassada[i] || {gross:0, net:0, rides:0, km:0, activeHours:0, perActiveHour:0, netPerKm:0, outWalletGross:0};
     const dif = d.gross - p.gross;
     const titulo = nomes[i] + ' • atual ' + brl(d.gross) + ' / passada ' + brl(p.gross);
     const detalhes =
@@ -51,7 +97,8 @@ function renderWeekDash(){
       '<br>KM: ' + km(d.km) + ' vs ' + km(p.km) +
       '<br>horas ativas: ' + horasTxt(d.activeHours) + ' vs ' + horasTxt(p.activeHours) +
       '<br>R$/h ativa: ' + brl(porHora(d)) + ' vs ' + brl(porHora(p)) +
-      '<br>R$/km líquido: ' + brl(d.netPerKm) + ' vs ' + brl(p.netPerKm);
+      '<br>R$/km líquido: ' + brl(d.netPerKm) + ' vs ' + brl(p.netPerKm) +
+      '<br>fora da carteira: ' + brl(d.outWalletGross || 0);
     return rowItem(titulo, detalhes, dif >= 0 ? 'good' : 'bad');
   }).join('');
 
@@ -80,6 +127,7 @@ function renderWeekDash(){
     progressLine('Líquido semana atual x passada inteira', atual.net, passadaCheia.net) +
     progressLine('Corridas semana atual x passada inteira', atual.rides, passadaCheia.rides, 'num') +
     progressLine('KM semana atual x passada inteira', atual.km, passadaCheia.km, 'km') +
+    rowItem('Entradas fora da carteira', brl(atual.outWalletGross) + ' aparecem nos dashboards e relatórios, mas não alteram a carteira.', atual.outWalletGross > 0 ? 'warning' : 'info') +
     rowItem('Horas ativas da semana', horasTxt(atual.activeHours) + ' atual vs ' + horasTxt(passadaCheia.activeHours) + ' semana passada inteira • R$/h atual ' + brl(atual.perActiveHour) + ' vs ' + brl(passadaCheia.perActiveHour), changeClass(atual.perActiveHour, passadaCheia.perActiveHour)) +
     rowItem('Resumo da semana passada', avisoSemanaPassada, passadaCheia.gross > 0 ? 'info' : 'warning')
   );
