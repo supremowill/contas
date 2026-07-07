@@ -314,9 +314,22 @@ body, .tab, .smart-tab, .card, .panel, h1, h2, h3, button, input, select, textar
 
 @media (max-width: 640px) {
   .smart-tabs {
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    overflow-x: auto;
     position: static;
     padding: 4px 0;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .smart-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .smart-tab {
+    flex: 0 0 auto;
+    min-width: 100px;
+    text-align: center;
+    padding: 10px 14px;
   }
   
   .smart-hero {
