@@ -103,7 +103,94 @@ function renderWalletCards(s){const box=$('walletCards');if(!box)return;const x=
 function renderEntries(s){const list=$('entriesList');if(!list)return;if(!s.entries?.length){list.innerHTML='<p class="hint">Nenhum ganho lançado.</p>';return}list.innerHTML=s.entries.map(e=>`<div class="item"><div><b>${brl(e.amount)}</b><div class="hint">${fmtDate(e.created_at)} • ${e.rides_count} corrida(s) • trecho ${km(e.km_delta)} • ${yesWallet(e.affects_wallet)?'somou na carteira':'não somou na carteira'}</div><div class="hint">${e.note||''}</div></div><button class="danger-btn" onclick="deleteEntry(${e.id})">Excluir</button></div>`).join('')}
 function renderExpenses(s){const list=$('expensesList');if(!list)return;if(!s.expenses?.length){list.innerHTML='<p class="hint">Nenhuma despesa lançada.</p>';return}list.innerHTML=s.expenses.map(e=>`<div class="item"><div><b>${e.category}: ${brl(e.amount)}</b><div class="hint">${fmtDate(e.created_at)} • ${yesWallet(e.affects_wallet)?'descontou da carteira':'só no lucro, não descontou da carteira'}</div><div class="hint">${e.note||''}</div></div><button class="danger-btn" onclick="deleteExpense(${e.id})">Excluir</button></div>`).join('')}
 function renderSmartDashboards(){renderDayDash();renderWeekDash();renderMonthDash()}
-function renderDayDash(){const today=startOfDay(new Date()),tomorrow=addDays(today,1),now=new Date(),yDay=addDays(today,-1),ySame=new Date(yDay.getTime()+(now-today)),refDay=addDays(today,-7),refNext=addDays(refDay,1),refSame=new Date(refDay.getTime()+(now-today));const m=metrics(today,tomorrow),yNow=metrics(yDay,ySame),yFull=metrics(yDay,today),pSame=metrics(refDay,refSame),pFull=metrics(refDay,refNext),proj=projection(m,today,tomorrow),wd=weekNames[today.getDay()];$('dayScore').textContent=statScore(m);$('daySummaryText').textContent='Hoje comparado com ontem e com a '+wd+' passada. A previsão de pico usa as duas referências.';$('dayCards').innerHTML=card('Bruto hoje',brl(m.gross),'info','ontem até agora: '+brl(yNow.gross)+' • '+wd+' passada: '+brl(pSame.gross))+card('Líquido hoje',brl(m.net),moneyClass(m.net),'ontem até agora: '+brl(yNow.net)+' • '+wd+' passada: '+brl(pSame.net))+card('Diferença vs ontem',signedMoney(m.gross-yNow.gross),changeClass(m.gross,yNow.gross),changeText(m.gross,yNow.gross)+' no bruto')+card('Diferença vs semana passada',signedMoney(m.gross-pSame.gross),changeClass(m.gross,pSame.gross),changeText(m.gross,pSame.gross)+' no bruto')+card('Corridas hoje',m.rides,changeClass(m.rides,yNow.rides),'ontem: '+yNow.rides+' • '+wd+' passada: '+pSame.rides)+card('KM hoje',km(m.km),changeClass(m.km,yNow.km),'ontem: '+km(yNow.km)+' • '+wd+' passada: '+km(pSame.km))+card('Ontem dia cheio',brl(yFull.gross),'purple','bruto total de ontem')+card(wd+' passada dia cheio',brl(pFull.gross),'purple','bruto total da referência')+card('Média/corrida',brl(m.avgRide),'info','ontem: '+brl(yNow.avgRide)+' • sem. passada: '+brl(pSame.avgRide))+card('R$/km líquido',brl(m.netPerKm),m.netPerKm>=1?'good':'warning','ontem: '+brl(yNow.netPerKm)+' • sem. passada: '+brl(pSame.netPerKm))+card('Projeção bruto dia',brl(proj.gross),'purple','ritmo atual')+card('Horas com corrida',m.activeHours,'info','ontem: '+yNow.activeHours+' • sem. passada: '+pSame.activeHours);const yHours=byHour(yFull),refHours=byHour(pFull),yBest=topHours(yHours,6),refBest=topHours(refHours,6);drawBarSeries('dayHourlyChart',refHours.map(x=>hourLabel(x.hour)),refHours.map(x=>x.gross),'Referência por horário: '+wd+' passada');drawCompareBars('dayCompareChart',['Bruto','Líquido','Corridas','KM'],[m.gross,m.net,m.rides,m.km],[yNow.gross,yNow.net,yNow.rides,yNow.km]);renderList('dayBestHours','<h3 class="hint">Ontem</h3>'+yBest.map(h=>rowItem(hourLabel(h.hour)+' • '+brl(h.gross),'ontem • '+h.rides+' corrida(s) • '+km(h.km),'good')).join('')+'<h3 class="hint">'+wd+' passada</h3>'+refBest.map(h=>rowItem(hourLabel(h.hour)+' • '+brl(h.gross),wd+' passada • '+h.rides+' corrida(s) • '+km(h.km),'good')).join(''),'Ainda não há histórico suficiente.');renderList('dayPeakForecast',yBest.map(h=>rowItem(hourLabel(h.hour)+' pico de ontem',brl(h.gross)+' ontem • '+h.rides+' corrida(s) • '+km(h.km),'info')).join('')+refBest.map(h=>rowItem(hourLabel(h.hour)+' pico da '+wd+' passada',brl(h.gross)+' na referência semanal • '+h.rides+' corrida(s) • '+km(h.km),'info')).join(''),'Sem base para prever pico.');renderList('dayInsights',progressLine('Bruto vs ontem',m.gross,yNow.gross)+progressLine('Bruto vs '+wd+' passada',m.gross,pSame.gross)+progressLine('Líquido vs ontem',m.net,yNow.net)+progressLine('Líquido vs '+wd+' passada',m.net,pSame.net)+progressLine('Corridas vs ontem',m.rides,yNow.rides,'num')+progressLine('KM vs ontem',m.km,yNow.km,'km')+rowItem('Leitura',yFull.gross||pFull.gross?'Use ontem para ajuste curto e a '+wd+' passada para prever padrão real do dia da semana.':'Ainda há pouca base. Conforme você usar o app, a previsão fica melhor.'))}
+
+function renderDayDash(){
+  const today=startOfDay(new Date()),tomorrow=addDays(today,1),now=new Date(),yDay=addDays(today,-1),ySame=new Date(yDay.getTime()+(now-today)),refDay=addDays(today,-7),refNext=addDays(refDay,1),refSame=new Date(refDay.getTime()+(now-today));
+  const m=metrics(today,tomorrow),yNow=metrics(yDay,ySame),yFull=metrics(yDay,today),pSame=metrics(refDay,refSame),pFull=metrics(refDay,refNext),proj=projection(m,today,tomorrow),wd=weekNames[today.getDay()];
+  
+  // Cálculo dos melhores horários baseado em TODOS os dados da semana anterior (últimos 7 dias)
+  const prevWeekStart = addDays(today, -7);
+  const prevWeekEnd = today;
+  const prevWeekEntries = flatEntries().filter(e => {
+    const c = String(e.created_at || '');
+    return c >= dateTimeKey(prevWeekStart) && c < dateTimeKey(prevWeekEnd);
+  });
+  const prevWeekHourMap = Array.from({length: 24}, (_, h) => ({ hour: h, gross: 0, rides: 0, km: 0, count: 0 }));
+  prevWeekEntries.forEach(e => {
+    const h = Math.max(0, Math.min(23, e.hour || 0));
+    prevWeekHourMap[h].gross += num(e.amount);
+    prevWeekHourMap[h].rides += num(e.rides_count);
+    prevWeekHourMap[h].km += num(e.km_delta);
+    prevWeekHourMap[h].count++;
+  });
+  const prevWeekBest = prevWeekHourMap.filter(x => x.gross > 0).sort((a, b) => b.gross - a.gross).slice(0, 6);
+
+  // Previsão Inteligente para o Final do Dia (Realizado hoje + Média das horas restantes de ontem e mesmo dia da semana anterior)
+  const curHour = new Date().getHours();
+  
+  const yRemainingGross = yFull.entries.filter(e => e.hour >= curHour).reduce((sum, e) => sum + num(e.amount), 0);
+  const yRemainingNet = yFull.entries.filter(e => e.hour >= curHour).reduce((sum, e) => sum + num(e.amount) - num(e.km_delta) * num(e.cost_per_km, 0.81), 0);
+
+  const pRemainingGross = pFull.entries.filter(e => e.hour >= curHour).reduce((sum, e) => sum + num(e.amount), 0);
+  const pRemainingNet = pFull.entries.filter(e => e.hour >= curHour).reduce((sum, e) => sum + num(e.amount) - num(e.km_delta) * num(e.cost_per_km, 0.81), 0);
+
+  const avgRemainingGross = (yRemainingGross + pRemainingGross) / 2;
+  const avgRemainingNet = (yRemainingNet + pRemainingNet) / 2;
+
+  const closeGrossForecast = m.gross + avgRemainingGross;
+  const closeNetForecast = m.net + avgRemainingNet;
+
+  $('dayScore').textContent=statScore(m);
+  $('daySummaryText').textContent='Hoje comparado com ontem e com a '+wd+' passada. Previsão de fechamento baseada no histórico restante.';
+  
+  $('dayCards').innerHTML=
+    card('Bruto hoje',brl(m.gross),'info','ontem até agora: '+brl(yNow.gross)+' • '+wd+' passada: '+brl(pSame.gross)) +
+    card('Líquido hoje',brl(m.net),moneyClass(m.net),'ontem até agora: '+brl(yNow.net)+' • '+wd+' passada: '+brl(pSame.net)) +
+    card('Diferença vs ontem',signedMoney(m.gross-yNow.gross),changeClass(m.gross,yNow.gross),changeText(m.gross,yNow.gross)+' no bruto') +
+    card('Diferença vs semana passada',signedMoney(m.gross-pSame.gross),changeClass(m.gross,pSame.gross),changeText(m.gross,pSame.gross)+' no bruto') +
+    card('Previsão Bruto (Final)',brl(closeGrossForecast),'purple',`com base nas próximas ${24 - curHour}h`) +
+    card('Previsão Líquido (Final)',brl(closeNetForecast),moneyClass(closeNetForecast),`com base nas próximas ${24 - curHour}h`) +
+    card('Ontem dia cheio',brl(yFull.gross),'purple','bruto total de ontem') +
+    card(wd+' passada dia cheio',brl(pFull.gross),'purple','bruto total da referência') +
+    card('Corridas hoje',m.rides,changeClass(m.rides,yNow.rides),'ontem: '+yNow.rides+' • '+wd+' passada: '+pSame.rides) +
+    card('KM hoje',km(m.km),changeClass(m.km,yNow.km),'ontem: '+km(yNow.km)+' • '+wd+' passada: '+km(pSame.km)) +
+    card('R$/km líquido',brl(m.netPerKm),m.netPerKm>=1?'good':'warning','ontem: '+brl(yNow.netPerKm)+' • sem. passada: '+brl(pSame.netPerKm)) +
+    card('Horas com corrida',m.activeHours,'info','ontem: '+yNow.activeHours+' • sem. passada: '+pSame.activeHours);
+
+  const yHours=byHour(yFull),refHours=byHour(pFull);
+  
+  drawBarSeries('dayHourlyChart',refHours.map(x=>hourLabel(x.hour)),refHours.map(x=>x.gross),'Referência por horário: '+wd+' passada');
+  drawCompareBars('dayCompareChart',['Bruto','Líquido','Corridas','KM'],[m.gross,m.net,m.rides,m.km],[yNow.gross,yNow.net,yNow.rides,yNow.km]);
+  
+  // Lista os melhores horários calculados a partir dos dados consolidados da semana anterior
+  renderList('dayBestHours',
+    prevWeekBest.map(h=>rowItem(
+      hourLabel(h.hour)+' • '+brl(h.gross),
+      `média na semana anterior: ${h.rides} corrida(s) • ${km(h.km)}`,
+      'good'
+    )).join(''),
+    'Sem dados suficientes da semana anterior.'
+  );
+
+  // Lista o detalhamento da previsão para o final do dia
+  renderList('dayPeakForecast',
+    rowItem(`Previsão Bruto Final do Dia`, brl(closeGrossForecast), 'info') +
+    rowItem(`Previsão Líquido Final do Dia`, brl(closeNetForecast), moneyClass(closeNetForecast)) +
+    rowItem(`Garantido até agora`, `${brl(m.gross)} bruto • ${brl(m.net)} líquido`, 'good') +
+    rowItem(`Horas restantes (${24 - curHour}h)`, `+${brl(avgRemainingGross)} bruto esperado baseado no histórico`, 'purple'),
+    'Sem dados para calcular previsão.'
+  );
+
+  renderList('dayInsights',
+    progressLine('Bruto vs ontem',m.gross,yNow.gross)+
+    progressLine('Bruto vs '+wd+' passada',m.gross,pSame.gross)+
+    progressLine('Líquido vs ontem',m.net,yNow.net)+
+    progressLine('Líquido vs '+wd+' passada',m.net,pSame.net)+
+    progressLine('Corridas vs ontem',m.rides,yNow.rides,'num')+
+    progressLine('KM vs ontem',m.km,yNow.km,'km')+
+    rowItem('Leitura',yFull.gross||pFull.gross?'Use ontem para ajuste curto e a '+wd+' passada para prever padrão real do dia da semana.':'Ainda há pouca base. Conforme você usar o app, a previsão fica melhor.')
+  );
+}
 function renderWeekDash(){const start=startOfWeek(new Date()),end=addDays(start,7),prevStart=addDays(start,-7),now=new Date(),prevSame=new Date(prevStart.getTime()+(now-start)),m=metrics(start,end),pSame=metrics(prevStart,prevSame),proj=projection(m,start,end);$('weekScore').textContent=statScore(m);$('weekSummaryText').textContent='Semana atual x semana passada no mesmo ponto.';$('weekCards').innerHTML=card('Bruto semana',brl(m.gross),'info','semana passada até agora: '+brl(pSame.gross))+card('Líquido semana',brl(m.net),moneyClass(m.net),'semana passada até agora: '+brl(pSame.net))+card('Diferença bruto',signedMoney(m.gross-pSame.gross),changeClass(m.gross,pSame.gross),changeText(m.gross,pSame.gross))+card('Diferença líquido',signedMoney(m.net-pSame.net),changeClass(m.net,pSame.net),changeText(m.net,pSame.net))+card('Corridas',m.rides,changeClass(m.rides,pSame.rides),'passada: '+pSame.rides)+card('KM',km(m.km),changeClass(m.km,pSame.km),'passada: '+km(pSame.km))+card('Projeção bruto semana',brl(proj.gross),'purple','ritmo atual')+card('Projeção líquido semana',brl(proj.net),moneyClass(proj.net),'ritmo atual');const days=byDay(start,7);drawBarSeries('weekDaysChart',days.map(d=>d.label),days.map(d=>d.gross),'Bruto por dia');drawCompareBars('weekCompareChart',['Bruto','Líquido','Corridas','KM'],[m.gross,m.net,m.rides,m.km],[pSame.gross,pSame.net,pSame.rides,pSame.km]);renderList('weekBestDays',[...days].sort((a,b)=>b.gross-a.gross).filter(d=>d.gross>0).slice(0,7).map(d=>rowItem(d.label+' • '+brl(d.gross),'líquido '+brl(d.net)+' • '+d.rides+' corrida(s) • '+km(d.km),'good')).join(''),'Sem corridas nesta semana.');renderList('weekBestHours',topHours(byHour(m),8).map(h=>rowItem(hourLabel(h.hour)+' • '+brl(h.gross),h.rides+' corrida(s) • '+km(h.km),'info')).join(''),'Sem horário forte nesta semana.');renderList('weekInsights',progressLine('Bruto semanal parcial',m.gross,pSame.gross)+progressLine('Líquido semanal parcial',m.net,pSame.net)+progressLine('Corridas semanais',m.rides,pSame.rides,'num')+progressLine('KM semanal',m.km,pSame.km,'km'))}
 function renderMonthDash(){const start=startOfMonth(new Date()),end=addMonths(start,1),prevStart=addMonths(start,-1),now=new Date(),prevSame=new Date(prevStart.getTime()+(now-start)),m=metrics(start,end),pSame=metrics(prevStart,prevSame),proj=projection(m,start,end);$('monthScore').textContent=statScore(m);$('monthSummaryText').textContent='Mês atual x mês passado no mesmo ponto.';$('monthCards').innerHTML=card('Bruto mês',brl(m.gross),'info','mês passado até agora: '+brl(pSame.gross))+card('Líquido mês',brl(m.net),moneyClass(m.net),'mês passado até agora: '+brl(pSame.net))+card('Diferença bruto',signedMoney(m.gross-pSame.gross),changeClass(m.gross,pSame.gross),changeText(m.gross,pSame.gross))+card('Diferença líquido',signedMoney(m.net-pSame.net),changeClass(m.net,pSame.net),changeText(m.net,pSame.net))+card('Corridas',m.rides,changeClass(m.rides,pSame.rides),'passado: '+pSame.rides)+card('KM',km(m.km),changeClass(m.km,pSame.km),'passado: '+km(pSame.km))+card('Projeção bruto mês',brl(proj.gross),'purple','ritmo atual')+card('Projeção líquido mês',brl(proj.net),moneyClass(proj.net),'ritmo atual');const days=byDay(start,Math.round((end-start)/86400000));drawBarSeries('monthDaysChart',days.map(d=>d.label),days.map(d=>d.gross),'Bruto por dia');drawCompareBars('monthCompareChart',['Bruto','Líquido','Corridas','KM'],[m.gross,m.net,m.rides,m.km],[pSame.gross,pSame.net,pSame.rides,pSame.km]);renderList('monthBestDays',[...days].sort((a,b)=>b.gross-a.gross).filter(d=>d.gross>0).slice(0,10).map(d=>rowItem(d.label+' • '+brl(d.gross),'líquido '+brl(d.net)+' • '+d.rides+' corrida(s) • '+km(d.km),'good')).join(''),'Sem corridas neste mês.');renderList('monthBestHours',topHours(byHour(m),10).map(h=>rowItem(hourLabel(h.hour)+' • '+brl(h.gross),h.rides+' corrida(s) • '+km(h.km),'info')).join(''),'Sem horário forte neste mês.');renderList('monthInsights',progressLine('Bruto mensal parcial',m.gross,pSame.gross)+progressLine('Líquido mensal parcial',m.net,pSame.net)+progressLine('Corridas mensais',m.rides,pSame.rides,'num')+progressLine('KM mensal',m.km,pSame.km,'km'))}
 
