@@ -30,9 +30,10 @@
   }
 
   function loadCompareFix(){
-    if(document.querySelector('script[src="/dashboard-compare-fix.js"]')) return;
+    if(document.querySelector('script[data-dashboard-compare-fix="true"]')) return;
     const s = document.createElement('script');
-    s.src = '/dashboard-compare-fix.js?v=4';
+    s.src = '/dashboard-compare-fix.js?v=6';
+    s.dataset.dashboardCompareFix = 'true';
     document.body.appendChild(s);
   }
 
