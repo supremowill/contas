@@ -37,6 +37,37 @@
     document.body.appendChild(s);
   }
 
+  async function createSessionFixed(){
+    try{
+      clearError();
+      const open = (typeof openSession === 'function') ? openSession() : null;
+      if(open){
+        showError('Já existe um passe vigente. Exclua/cancele o atual para criar outro.');
+        if(typeof showTab === 'function') showTab('dashboard');
+        return;
+      }
+      const start = (el('newStart') && el('newStart').value) || nowValue();
+      const body = {
+        platform: (el('newPlatform') && el('newPlatform').value) || 'Uber',
+        pass_type: Number((el('newType') && el('newType').value) || 24),
+        pass_price: toNumber(el('newPrice') ? el('newPrice').value : 0),
+        cost_per_km: toNumber(el('newKmCost') ? el('newKmCost').value : 0.81),
+        start_odometer: toNumber(el('newStartOdometer') ? el('newStartOdometer').value : 0),
+        started_at: start,
+        notes: (el('newNotes') && el('newNotes').value) || ''
+      };
+      const created = await api('/api/sessions', { method:'POST', body: JSON.stringify(body) });
+      activeSessionId = Number(created.id);
+      localStorage.setItem('activeSessionId', activeSessionId);
+      dashboardMode = 'pass';
+      localStorage.setItem('dashboardMode', 'pass');
+      await loadData();
+      if(typeof showTab === 'function') showTab('dashboard');
+    }catch(e){
+      showError(e.message || 'Erro ao criar passe.');
+    }
+  }
+
   async function getSessionForEntry(at, baseSession, note){
     if(Array.isArray(sessions)){
       const existing = sessions.find(s => coversSession(s, at));
@@ -141,6 +172,8 @@
       setTimeout(install, 300);
       return;
     }
+    window.createSession = createSessionFixed;
+    try { createSession = createSessionFixed; } catch(e) {}
     window.addEntry = addEntryWithKm;
     try { addEntry = addEntryWithKm; } catch(e) {}
     setTimeout(repairManualEntriesOutsidePass, 1500);
