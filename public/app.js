@@ -32,9 +32,10 @@ function showError(msg){const box=$('globalError');if(!box)return;box.style.disp
 function clearError(){const box=$('globalError');if(!box)return;box.style.display='none';box.textContent=''}
 function yesWallet(v){return v!==false&&v!=='false'}
 function moneyClass(v){return num(v)>=0?'good':'bad'}
-function signedMoney(v){return `${num(v)>=0?'+':''}${brl(v)}`}
+function signedMoney(v){const val=num(v);return `${val>=0?'↑ +':'↓ '}${brl(Math.abs(val))}`}
 function changePct(cur,prev){return prev?((cur-prev)/Math.abs(prev))*100:cur?100:0}
-function changeText(cur,prev){const p=changePct(cur,prev);return `${p>=0?'+':''}${pct(p)}`}
+// Utiliza setas indicadoras de tendência para as métricas comparativas
+function changeText(cur,prev){const p=changePct(cur,prev);return `${p>=0?'↑ +':'↓ '}${pct(Math.abs(p))}`}
 function changeClass(cur,prev){return num(cur)>=num(prev)?'good':'bad'}
 function hourLabel(h){return `${String(h).padStart(2,'0')}h`}
 
@@ -48,7 +49,37 @@ function showDashMode(mode){dashboardMode=mode;localStorage.setItem('dashboardMo
 
 async function loadData(){clearError();try{sessions=await api('/api/sessions');const open=openSession();if(open)activeSessionId=open.id;if(activeSessionId&&!sessions.find(s=>s.id===activeSessionId)){activeSessionId=0;localStorage.removeItem('activeSessionId')}if(activeSessionId)localStorage.setItem('activeSessionId',activeSessionId);renderDashboard();renderHistory();renderNewWarning();loadReport(currentReport,true)}catch(e){showError(e.message)}}
 function renderNewWarning(){const open=openSession(),box=$('activeWarning');if(!box)return;if(open){box.style.display='block';box.innerHTML=`Já existe um passe vigente: <b>${open.pass_type}h</b>, iniciado em <b>${fmtDate(open.started_at)}</b>. Tempo restante: <b>${leftTime(open)}</b>. Para iniciar outro, cancele/exclua o atual.`}else box.style.display='none'}
-function card(label,value,cls='',sub=''){return `<div class="card"><div class="label">${label}</div><div class="value ${cls}">${value}</div>${sub?`<div class="card-sub">${sub}</div>`:''}</div>`}
+function getMetricIcon(label) {
+  const l = String(label || '').toLowerCase();
+  if (l.includes('bruto') || l.includes('ganho')) {
+    return `<svg class="metric-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`;
+  }
+  if (l.includes('líquido') || l.includes('margem') || l.includes('lucro')) {
+    return `<svg class="metric-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>`;
+  }
+  if (l.includes('despesa') || l.includes('custo') || l.includes('passe')) {
+    return `<svg class="metric-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+  }
+  if (l.includes('km') || l.includes('quilometragem') || l.includes('odômetro') || l.includes('odometer') || l.includes('painel')) {
+    return `<svg class="metric-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+  }
+  if (l.includes('corrida') || l.includes('rides') || l.includes('viagem')) {
+    return `<svg class="metric-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>`;
+  }
+  if (l.includes('hora') || l.includes('tempo') || l.includes('conferência') || l.includes('atualizado')) {
+    return `<svg class="metric-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+  }
+  if (l.includes('carteira') || l.includes('wallet')) {
+    return `<svg class="metric-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>`;
+  }
+  return `<svg class="metric-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>`;
+}
+
+// Renderiza cartões de métricas do dashboard de forma visual e atraente com ícones e subtextos estilizados
+function card(label,value,cls='',sub=''){
+  const icon = getMetricIcon(label);
+  return `<div class="card ${cls}"><div class="card-header"><span class="label">${label}</span>${icon}</div><div class="value ${cls}">${value}</div>${sub?`<div class="card-sub">${sub}</div>`:''}</div>`;
+}
 function rowItem(title,sub='',cls=''){return `<div class="smart-item"><b class="${cls}">${title}</b><span>${sub}</span></div>`}
 function renderList(id,html,empty='Sem dados ainda.'){const box=$(id);if(box)box.innerHTML=html||`<p class="hint">${empty}</p>`}
 function statScore(m){if(!m.gross)return'-';const margin=m.gross?m.net/m.gross*100:0;if(margin>=70)return'Excelente';if(margin>=55)return'Bom';if(margin>=35)return'Atenção';return'Pesado'}
@@ -92,15 +123,240 @@ function filteredSessions(){const today=new Date().toISOString().slice(0,10),mon
 function renderHistory(){const body=$('historyBody');if(!body)return;const list=filteredSessions();body.innerHTML=list.map(s=>{const x=s.summary,expired=isExpired(s);return `<tr><td>${fmtDate(s.started_at)}</td><td class="${expired?'bad':'good'}">${expired?'Expirado':'Vigente'}</td><td>${s.pass_type}h</td><td>${brl(x.total_gross)}</td><td>${km(x.total_km)}</td><td>${x.total_rides}</td><td>${brl(x.total_expenses)}</td><td>${brl(x.net_real)}</td><td>${x.wallet_has_value?brl(x.wallet_projected):'-'}</td><td>${brl(x.net_per_km)}</td><td>${brl(x.net_per_hour)}</td><td>${pct(x.margin_real_percent)}</td><td class="${x.status.key}">${x.status.label}</td><td><button class="ghost" onclick="openHistorySession(${s.id})">Abrir</button> <button class="danger-btn" onclick="deleteSession(${s.id})">Excluir</button></td></tr>`}).join('')||'<tr><td colspan="14">Sem dados.</td></tr>'}
 async function loadReport(period='daily',silent=false){currentReport=period;try{const rows=await api(`/api/reports?period=${period}`);$('reportTitle').textContent={daily:'Resumo diário',weekly:'Resumo semanal',monthly:'Resumo mensal'}[period];$('reportBody').innerHTML=rows.map(r=>`<tr><td>${r.period}</td><td>${r.sessions_count}</td><td>${brl(r.total_gross)}</td><td>${km(r.total_km)}</td><td>${r.total_rides}</td><td>${brl(r.total_expenses)}</td><td>${brl(r.total_net_real)}</td><td>${brl(r.net_per_km)}</td><td>${brl(r.net_per_hour)}</td><td>${pct(r.margin_real_percent)}</td><td class="${r.status.key}">${r.status.label}</td></tr>`).join('')||'<tr><td colspan="11">Sem dados.</td></tr>'}catch(e){if(!silent)showError(e.message)}}
 
-function ctx(id){const c=$(id);if(!c)return null;const dpr=window.devicePixelRatio||1,w=c.clientWidth||360,h=c.height||220;c.width=w*dpr;c.height=h*dpr;const g=c.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,w,h);g.font='12px Arial';return{g,w,h}}
-function colors(){return['#22c55e','#38bdf8','#f59e0b','#ef4444','#a78bfa','#fb7185','#14b8a6','#eab308']}
-function drawAllCharts(s){drawGauge('gaugeChart',s.summary.pass_percent);drawDonut('donutChart',s);drawLine('lineChart',s);drawBars('barChart',s);drawExpenses('expenseChart',s)}
-function drawGauge(id,value){const c=ctx(id);if(!c)return;const {g,w,h}=c,cx=w/2,cy=h-8,r=Math.min(w/2-22,h-16,116),thickness=Math.max(10,Math.min(15,r*.17));g.lineCap='round';g.lineWidth=thickness;[['#22c55e',0,.15],['#f59e0b',.15,.25],['#ef4444',.25,1]].forEach(([color,a,b])=>{g.strokeStyle=color;g.beginPath();g.arc(cx,cy,r,Math.PI+a*Math.PI,Math.PI+b*Math.PI);g.stroke()});const v=Math.max(0,Math.min(value/100,1)),angle=Math.PI+v*Math.PI;g.strokeStyle='rgba(255,255,255,.92)';g.lineWidth=3;g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+Math.cos(angle)*(r-9),cy+Math.sin(angle)*(r-9));g.stroke();g.fillStyle='#f8fafc';g.beginPath();g.arc(cx,cy,4,0,Math.PI*2);g.fill()}
-function drawDonut(id,s){const c=ctx(id);if(!c)return;const {g,w,h}=c,x=s.summary,vals=[x.net_real,x.km_cost,x.extra_expenses,num(s.pass_price)].map(v=>Math.max(v,0)),labels=['Líquido','Custo km','Despesas','Passe'],sum=vals.reduce((a,b)=>a+b,0)||1,cs=colors();let a=-Math.PI/2;const r=Math.min(w,h)/4.2,cx=w/2,cy=h/2;vals.forEach((v,i)=>{const ang=v/sum*2*Math.PI;g.fillStyle=cs[i];g.beginPath();g.moveTo(cx,cy);g.arc(cx,cy,r,a,a+ang);g.closePath();g.fill();a+=ang});g.fillStyle='#111827';g.beginPath();g.arc(cx,cy,r*.55,0,7);g.fill();labels.forEach((l,i)=>{g.fillStyle=cs[i];g.fillRect(12,18+i*24,12,12);g.fillStyle='#f8fafc';g.fillText(`${l}: ${brl(vals[i])}`,30,29+i*24)})}
-function drawLine(id,s){const c=ctx(id);if(!c)return;const {g,w,h}=c,entries=[...(s.entries||[])].reverse();if(!entries.length){g.fillStyle='#9ca3af';g.fillText('Sem lançamentos',20,30);return}let acc=0;const pts=entries.map((e,i)=>{acc+=num(e.amount);return{x:30+i*Math.max((w-60)/(entries.length-1||1),1),y:h-30-(acc/(s.summary.total_gross||1))*(h-60)}});g.strokeStyle='#334155';g.beginPath();g.moveTo(30,10);g.lineTo(30,h-30);g.lineTo(w-10,h-30);g.stroke();g.strokeStyle='#38bdf8';g.lineWidth=3;g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.stroke();g.fillStyle='#f8fafc';g.fillText('Bruto acumulado',35,22)}
-function drawBars(id,s){const c=ctx(id);if(!c)return;const {g,w,h}=c,entries=[...(s.entries||[])].reverse(),cs=colors();if(!entries.length){g.fillStyle='#9ca3af';g.fillText('Sem lançamentos',20,30);return}const max=Math.max(...entries.map(e=>num(e.amount)),1),bw=(w-50)/entries.length;entries.forEach((e,i)=>{const bh=num(e.amount)/max*(h-45);g.fillStyle=cs[i%cs.length];g.fillRect(30+i*bw,h-25-bh,Math.max(bw-6,4),bh)});g.fillStyle='#f8fafc';g.fillText('Ganho por lançamento',30,18)}
-function drawExpenses(id,s){const c=ctx(id);if(!c)return;const {g,w,h}=c,cats=s.summary.expenses_by_category||{},items=Object.entries(cats),cs=colors();if(!items.length){g.fillStyle='#9ca3af';g.fillText('Sem despesas extras',20,30);return}const max=Math.max(...items.map(x=>x[1]),1);items.forEach(([name,val],i)=>{const y=24+i*28,bar=Math.max(0,(w-170)*(val/max));g.fillStyle=cs[i%cs.length];g.fillRect(120,y-12,bar,16);g.fillStyle='#f8fafc';g.fillText(name,10,y);g.fillText(brl(val),125+bar,y)})}
-function drawBarSeries(id,labels,values,title=''){const c=ctx(id);if(!c)return;const {g,w,h}=c,cs=colors(),max=Math.max(...values.map(num),1),bw=(w-50)/(values.length||1);g.fillStyle='#f8fafc';g.fillText(title,30,18);values.forEach((v,i)=>{const bh=num(v)/max*(h-55);g.fillStyle=cs[i%cs.length];g.fillRect(30+i*bw,h-28-bh,Math.max(bw-5,3),bh);if(values.length<=12){g.fillStyle='#94a3b8';g.fillText(labels[i],30+i*bw,h-8)}})}
-function drawCompareBars(id,labels,cur,prev){const c=ctx(id);if(!c)return;const {g,w,h}=c,max=Math.max(...cur.map(num),...prev.map(num),1),groupW=(w-50)/(labels.length||1);g.fillStyle='#f8fafc';g.fillText('Atual x referência',30,18);labels.forEach((l,i)=>{const x=30+i*groupW,cv=num(cur[i]),pv=num(prev[i]),ch=cv/max*(h-60),ph=pv/max*(h-60);g.fillStyle='#38bdf8';g.fillRect(x,h-28-ch,Math.max(groupW*.32,8),ch);g.fillStyle='#f59e0b';g.fillRect(x+Math.max(groupW*.36,12),h-28-ph,Math.max(groupW*.32,8),ph);g.fillStyle='#94a3b8';g.fillText(l,x,h-8)});g.fillStyle='#38bdf8';g.fillText('Atual',w-105,18);g.fillStyle='#f59e0b';g.fillText('Referência',w-60,18)}
+function drawRoundedRect(g, x, y, w, h, r, fill, stroke) {
+  if (w <= 0 || h <= 0) return;
+  if (r > w / 2) r = w / 2;
+  if (r > h / 2) r = h / 2;
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+  if (fill) { g.fillStyle = fill; g.fill(); }
+  if (stroke) { g.strokeStyle = stroke; g.stroke(); }
+}
+
+function ctx(id){
+  const c=$(id);
+  if(!c)return null;
+  const dpr=window.devicePixelRatio||1,w=c.clientWidth||360,h=c.height||220;
+  c.width=w*dpr;
+  c.height=h*dpr;
+  const g=c.getContext('2d');
+  g.scale(dpr,dpr);
+  g.clearRect(0,0,w,h);
+  g.font='bold 11px Outfit, sans-serif';
+  return{g,w,h};
+}
+
+function colors(){
+  return['#38bdf8','#22c55e','#f59e0b','#a78bfa','#ef4444','#fb7185','#14b8a6','#eab308'];
+}
+
+function drawAllCharts(s){
+  drawGauge('gaugeChart',s.summary.pass_percent);
+  drawDonut('donutChart',s);
+  drawLine('lineChart',s);
+  drawBars('barChart',s);
+  drawExpenses('expenseChart',s);
+}
+
+function drawGauge(id,value){
+  const c=ctx(id);
+  if(!c)return;
+  const {g,w,h}=c,cx=w/2,cy=h-8,r=Math.min(w/2-22,h-16,116),thickness=Math.max(10,Math.min(15,r*.17));
+  g.lineCap='round';
+  g.lineWidth=thickness;
+  [['#22c55e',0,.15],['#f59e0b',.15,.25],['#ef4444',.25,1]].forEach(([color,a,b])=>{
+    g.strokeStyle=color;
+    g.beginPath();
+    g.arc(cx,cy,r,Math.PI+a*Math.PI,Math.PI+b*Math.PI);
+    g.stroke();
+  });
+  const v=Math.max(0,Math.min(value/100,1)),angle=Math.PI+v*Math.PI;
+  g.strokeStyle='rgba(255,255,255,.95)';
+  g.lineWidth=3;
+  g.beginPath();
+  g.moveTo(cx,cy);
+  g.lineTo(cx+Math.cos(angle)*(r-9),cy+Math.sin(angle)*(r-9));
+  g.stroke();
+  
+  g.fillStyle='#111827';
+  g.beginPath();
+  g.arc(cx,cy,8,0,Math.PI*2);
+  g.fill();
+  g.strokeStyle='#f8fafc';
+  g.lineWidth=2;
+  g.stroke();
+}
+
+function drawDonut(id,s){
+  const c=ctx(id);
+  if(!c)return;
+  const {g,w,h}=c,x=s.summary,vals=[x.net_real,x.km_cost,x.extra_expenses,num(s.pass_price)].map(v=>Math.max(v,0)),labels=['Líquido','Custo km','Despesas','Passe'],sum=vals.reduce((a,b)=>a+b,0)||1,cs=colors();
+  let a=-Math.PI/2;
+  const r=Math.min(w,h)/4.5,cx=w/2+40,cy=h/2;
+  vals.forEach((v,i)=>{
+    const ang=v/sum*2*Math.PI;
+    g.fillStyle=cs[i];
+    g.beginPath();
+    g.moveTo(cx,cy);
+    g.arc(cx,cy,r,a,a+ang);
+    g.closePath();
+    g.fill();
+    a+=ang;
+  });
+  g.fillStyle='#111827';
+  g.beginPath();
+  g.arc(cx,cy,r*.55,0,7);
+  g.fill();
+  labels.forEach((l,i)=>{
+    g.fillStyle=cs[i];
+    drawRoundedRect(g,12,18+i*24,12,12,3,cs[i]);
+    g.fillStyle='#f8fafc';
+    g.font='bold 11px Outfit, sans-serif';
+    g.fillText(`${l}: ${brl(vals[i])}`,30,29+i*24);
+  });
+}
+
+function drawLine(id,s){
+  const c=ctx(id);
+  if(!c)return;
+  const {g,w,h}=c,entries=[...(s.entries||[])].reverse();
+  if(!entries.length){
+    g.fillStyle='#9ca3af';
+    g.fillText('Sem lançamentos',20,30);
+    return;
+  }
+  let acc=0;
+  const pts=entries.map((e,i)=>{
+    acc+=num(e.amount);
+    return{x:35+i*Math.max((w-65)/(entries.length-1||1),1),y:h-30-(acc/(s.summary.total_gross||1))*(h-60)};
+  });
+  
+  const grad = g.createLinearGradient(0,10,0,h-30);
+  grad.addColorStop(0,'rgba(56,189,248,0.25)');
+  grad.addColorStop(1,'rgba(56,189,248,0.00)');
+  g.fillStyle=grad;
+  g.beginPath();
+  g.moveTo(pts[0].x,h-30);
+  pts.forEach(p=>g.lineTo(p.x,p.y));
+  g.lineTo(pts[pts.length-1].x,h-30);
+  g.closePath();
+  g.fill();
+  
+  g.strokeStyle='rgba(255,255,255,0.08)';
+  g.lineWidth=1;
+  g.beginPath();
+  g.moveTo(35,10);g.lineTo(35,h-30);g.lineTo(w-10,h-30);
+  g.stroke();
+  
+  g.strokeStyle='#38bdf8';
+  g.lineWidth=3;
+  g.beginPath();
+  pts.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));
+  g.stroke();
+  
+  pts.forEach(p=>{
+    g.fillStyle='#f8fafc';
+    g.beginPath();
+    g.arc(p.x,p.y,3.5,0,Math.PI*2);
+    g.fill();
+    g.strokeStyle='#0b1120';
+    g.lineWidth=1.5;
+    g.stroke();
+  });
+  
+  g.fillStyle='#f8fafc';
+  g.font='bold 11px Outfit, sans-serif';
+  g.fillText('Bruto acumulado',38,22);
+}
+
+function drawBars(id,s){
+  const c=ctx(id);
+  if(!c)return;
+  const {g,w,h}=c,entries=[...(s.entries||[])].reverse(),cs=colors();
+  if(!entries.length){
+    g.fillStyle='#9ca3af';
+    g.fillText('Sem lançamentos',20,30);
+    return;
+  }
+  const max=Math.max(...entries.map(e=>num(e.amount)),1),bw=(w-50)/entries.length;
+  entries.forEach((e,i)=>{
+    const bh=num(e.amount)/max*(h-50);
+    const barWidth = Math.max(bw-6,4);
+    const x = 30+i*bw;
+    const y = h-25-bh;
+    drawRoundedRect(g,x,y,barWidth,bh,4,cs[i%cs.length]);
+  });
+  g.fillStyle='#f8fafc';
+  g.font='bold 11px Outfit, sans-serif';
+  g.fillText('Ganho por lançamento',30,18);
+}
+
+function drawExpenses(id,s){
+  const c=ctx(id);
+  if(!c)return;
+  const {g,w,h}=c,cats=s.summary.expenses_by_category||{},items=Object.entries(cats),cs=colors();
+  if(!items.length){
+    g.fillStyle='#9ca3af';
+    g.fillText('Sem despesas extras',20,30);
+    return;
+  }
+  const max=Math.max(...items.map(x=>x[1]),1);
+  items.forEach(([name,val],i)=>{
+    const y=24+i*28,bar=Math.max(0,(w-170)*(val/max));
+    drawRoundedRect(g,120,y-12,bar,16,4,cs[i%cs.length]);
+    g.fillStyle='#f8fafc';
+    g.font='bold 11px Outfit, sans-serif';
+    g.fillText(name,10,y);
+    g.fillText(brl(val),125+bar,y);
+  });
+}
+
+function drawBarSeries(id,labels,values,title=''){
+  const c=ctx(id);
+  if(!c)return;
+  const {g,w,h}=c,cs=colors(),max=Math.max(...values.map(num),1),bw=(w-50)/(values.length||1);
+  g.fillStyle='#f8fafc';
+  g.font='bold 11px Outfit, sans-serif';
+  g.fillText(title,30,18);
+  values.forEach((v,i)=>{
+    const bh=num(v)/max*(h-58);
+    const barWidth = Math.max(bw-5,3);
+    const x = 30+i*bw;
+    const y = h-28-bh;
+    drawRoundedRect(g,x,y,barWidth,bh,3,cs[i%cs.length]);
+    if(values.length<=12){
+      g.fillStyle='#94a3b8';
+      g.font='bold 9px Outfit, sans-serif';
+      g.fillText(labels[i],30+i*bw,h-8);
+    }
+  });
+}
+
+function drawCompareBars(id,labels,cur,prev){
+  const c=ctx(id);
+  if(!c)return;
+  const {g,w,h}=c,max=Math.max(...cur.map(num),...prev.map(num),1),groupW=(w-50)/(labels.length||1);
+  g.fillStyle='#f8fafc';
+  g.font='bold 11px Outfit, sans-serif';
+  g.fillText('Atual x referência',30,18);
+  labels.forEach((l,i)=>{
+    const x=30+i*groupW,cv=num(cur[i]),pv=num(prev[i]),ch=cv/max*(h-60),ph=pv/max*(h-60);
+    const barW = Math.max(groupW*.32,8);
+    drawRoundedRect(g,x,h-28-ch,barW,ch,3,'#38bdf8');
+    drawRoundedRect(g,x+Math.max(groupW*.36,12),h-28-ph,barW,ph,3,'#f59e0b');
+    g.fillStyle='#94a3b8';
+    g.font='bold 10px Outfit, sans-serif';
+    g.fillText(l,x,h-8);
+  });
+  g.fillStyle='#38bdf8';
+  g.fillText('Atual',w-105,18);
+  g.fillStyle='#f59e0b';
+  g.fillText('Referência',w-60,18);
+}
 async function boot(){if($('newStart'))$('newStart').value=nowLocal();if($('entryTime'))$('entryTime').value=nowLocal();if($('expenseTime'))$('expenseTime').value=nowLocal();if($('walletTime'))$('walletTime').value=nowLocal();try{const h=await fetch('/api/health').then(r=>r.json());if(h.pin_required&&!localStorage.getItem('appPin'))showLogin();await loadData();setInterval(()=>{renderDashboard();renderNewWarning()},60000)}catch(e){showError('Erro ao carregar servidor.')}}
 boot();
