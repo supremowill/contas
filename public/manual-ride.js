@@ -8,8 +8,8 @@
   }
 
   function install(){
-    load('/manual-ride-core.js?v=1', 'manual-core');
-    load('/realtime.js?v=1', 'supabase-realtime');
+    load('/manual-ride-core.js?v=2', 'manual-core');
+    load('/realtime.js?v=2', 'supabase-realtime');
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
